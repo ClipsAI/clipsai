@@ -21,5 +21,9 @@ setup(name='clip',
           'whisperx@git+https://github.com/m-bain/whisperx.git',
           'sentence-transformers',
           'matplotlib',
+          'cv2',
+          'pynvml',
+          'scenedetect'
+          'facenet-pytorch',
         ],
       zip_safe=False)
