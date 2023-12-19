@@ -88,7 +88,7 @@ class MediaFile(File):
                     super().get_type(),
                     self.get_type(),
                     file.get_mime_primary_type(),
-                    valid_media_file_types
+                    valid_media_file_types,
                 )
             )
 
@@ -129,13 +129,13 @@ class MediaFile(File):
 
         # logging message
         msg = (
-            "\n{}\n".format('-' * 40) +
-            "media_file_path: '{}'\n".format(self._path) +
-            "format_field: '{}'\n".format(format_field) +
-            "Terminal return code: '{}'\n".format(result.returncode) +
-            "Output: '{}'\n".format(result.stdout) +
-            "Err Output: '{}'\n".format(result.stderr) +
-            "{}\n".format('-' * 40)
+            "\n{}\n".format("-" * 40)
+            + "media_file_path: '{}'\n".format(self._path)
+            + "format_field: '{}'\n".format(format_field)
+            + "Terminal return code: '{}'\n".format(result.returncode)
+            + "Output: '{}'\n".format(result.stdout)
+            + "Err Output: '{}'\n".format(result.stderr)
+            + "{}\n".format("-" * 40)
         )
         # failure
         if result.returncode != SUCCESS or format_info == "":
@@ -186,14 +186,14 @@ class MediaFile(File):
 
         # logging message
         msg = (
-            "\n{}\n".format('-' * 40) +
-            "media_file_path: '{}'\n".format(self._path) +
-            "stream: '{}'\n".format(stream) +
-            "stream_field: '{}'\n".format(stream_field) +
-            "Terminal return code: '{}'\n".format(result.returncode) +
-            "Output: '{}'\n".format(result.stdout) +
-            "Err Output: '{}'\n".format(result.stderr) +
-            "{}\n".format('-' * 40)
+            "\n{}\n".format("-" * 40)
+            + "media_file_path: '{}'\n".format(self._path)
+            + "stream: '{}'\n".format(stream)
+            + "stream_field: '{}'\n".format(stream_field)
+            + "Terminal return code: '{}'\n".format(result.returncode)
+            + "Output: '{}'\n".format(result.stdout)
+            + "Err Output: '{}'\n".format(result.stderr)
+            + "{}\n".format("-" * 40)
         )
         # failure
         if result.returncode != SUCCESS:
@@ -251,12 +251,12 @@ class MediaFile(File):
 
         # logging message
         msg = (
-            "\n{}\n".format('-' * 40) +
-            "media_file_path: '{}'\n".format(self._path) +
-            "Terminal return code: '{}'\n".format(result.returncode) +
-            "Output: '{}'\n".format(result.stdout) +
-            "Err Output: '{}'\n".format(result.stderr) +
-            "{}\n".format('-' * 40)
+            "\n{}\n".format("-" * 40)
+            + "media_file_path: '{}'\n".format(self._path)
+            + "Terminal return code: '{}'\n".format(result.returncode)
+            + "Output: '{}'\n".format(result.stdout)
+            + "Err Output: '{}'\n".format(result.stderr)
+            + "{}\n".format("-" * 40)
         )
         # failure
         if result.returncode != SUCCESS:
@@ -521,9 +521,9 @@ class MediaFile(File):
         )
 
         if result.returncode != 0:
-            logging.error("FFmpeg failed for {} error: {}".format(
-                video_path, result.stderr
-            ))
+            logging.error(
+                "FFmpeg failed for {} error: {}".format(video_path, result.stderr)
+            )
             return None
 
         return frames_dir

@@ -74,10 +74,7 @@ class PdfFile(File):
                 "'{}' is a valid {} but is not a valid {} because it has file "
                 "extension '{}' instead of 'pdf'."
                 "".format(
-                    self._path,
-                    super().get_type(),
-                    self.get_type(),
-                    file_extension
+                    self._path, super().get_type(), self.get_type(), file_extension
                 )
             )
 

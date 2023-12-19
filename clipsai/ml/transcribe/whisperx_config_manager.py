@@ -102,9 +102,8 @@ class WhisperXTranscriberConfigManager(ConfigManager):
             is invalid
         """
         if model_size not in self.get_valid_model_sizes():
-            msg = (
-                "Invalid whisper model size '{}'. Must be one of: {}."
-                "".format(model_size, self.get_valid_model_sizes())
+            msg = "Invalid whisper model size '{}'. Must be one of: {}." "".format(
+                model_size, self.get_valid_model_sizes()
             )
             return msg
 
@@ -193,9 +192,8 @@ class WhisperXTranscriberConfigManager(ConfigManager):
             to transcribe. A descriptive error message if 'iso6391_lang_code' is invalid
         """
         if iso6391_lang_code not in self.get_valid_languages():
-            msg = (
-                "Invalid ISO 639-1 language '{}'. Must be one of: {}."
-                "".format(iso6391_lang_code, self.get_valid_languages())
+            msg = "Invalid ISO 639-1 language '{}'. Must be one of: {}." "".format(
+                iso6391_lang_code, self.get_valid_languages()
             )
             return msg
 
@@ -277,9 +275,8 @@ class WhisperXTranscriberConfigManager(ConfigManager):
             None if 'precision' is valid. A descriptive error message if invalid
         """
         if precision not in self.get_valid_precisions():
-            msg = (
-                "Invalid compute type '{}'. Must be one of: {}."
-                "".format(precision, self.get_valid_precisions())
+            msg = "Invalid compute type '{}'. Must be one of: {}." "".format(
+                precision, self.get_valid_precisions()
             )
             return msg
 

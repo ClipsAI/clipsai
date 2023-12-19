@@ -14,7 +14,7 @@ from ..transcription.whisperx import WhisperXTranscription
 from ..ml.transcribe.whisperx import WhisperXTranscriber
 
 
-class Transcriber():
+class Transcriber:
     """
     A class for transcribing an asset's media
     """

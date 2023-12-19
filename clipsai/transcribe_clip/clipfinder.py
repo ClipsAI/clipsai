@@ -11,7 +11,7 @@ from ..transcription.whisperx import WhisperXTranscription
 from ..ml.clipfind.texttile import TextTileClipFinder
 
 
-class ClipFinder():
+class ClipFinder:
     """
     A class for finding clips in a asset's media.
     """

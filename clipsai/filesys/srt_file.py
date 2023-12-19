@@ -64,11 +64,9 @@ class SrtFile(File):
         if file_extension != "srt":
             return (
                 "'{}' is a valid {} but is not a valid {} because it has file "
-                "extension '{}' instead of 'srt'.""".format(
-                    self._path,
-                    super().get_type(),
-                    self.get_type(),
-                    file_extension
+                "extension '{}' instead of 'srt'."
+                "".format(
+                    self._path, super().get_type(), self.get_type(), file_extension
                 )
             )
 

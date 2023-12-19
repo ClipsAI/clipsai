@@ -626,12 +626,12 @@ class WhisperXTranscription(Transcription):
         print(title)
         print("-" * len(title))
         for i, char_info in enumerate(self.get_char_info(predicted)):
-            print("char: {}".format(char_info['char']))
-            print("startTime: {}".format(char_info['startTime']), end=" | ")
-            print("endTime: {}".format(char_info['endTime']))
+            print("char: {}".format(char_info["char"]))
+            print("startTime: {}".format(char_info["startTime"]), end=" | ")
+            print("endTime: {}".format(char_info["endTime"]))
             print("index: {}".format(i), end=" | ")
-            print("wordIndex: {}".format(char_info['wordIdx']), end=" | ")
-            print("sentenceIndex: {}\n".format(char_info['sentenceIdx']))
+            print("wordIndex: {}".format(char_info["wordIdx"]), end=" | ")
+            print("sentenceIndex: {}\n".format(char_info["sentenceIdx"]))
 
     def print_word_info(self, predicted: bool) -> None:
         """
@@ -650,13 +650,13 @@ class WhisperXTranscription(Transcription):
         print(title)
         print("-" * len(title))
         for i, word_info in enumerate(self.get_word_info(predicted)):
-            print("word: '{}'".format(word_info['word']), end=" | ")
+            print("word: '{}'".format(word_info["word"]), end=" | ")
             print("wordIndex: {}".format(i))
-            print("speaker: {}".format(word_info['speaker']))
-            print("startTime: {}".format(word_info['startTime']), end=" | ")
-            print("endTime: {}".format(word_info['endTime']))
-            print("startChar: {}".format(word_info['startChar']), end=" | ")
-            print("endChar: {}\n".format(word_info['endChar']))
+            print("speaker: {}".format(word_info["speaker"]))
+            print("startTime: {}".format(word_info["startTime"]), end=" | ")
+            print("endTime: {}".format(word_info["endTime"]))
+            print("startChar: {}".format(word_info["startChar"]), end=" | ")
+            print("endChar: {}\n".format(word_info["endChar"]))
 
     def print_sentence_info(self, predicted: bool) -> None:
         """
@@ -675,12 +675,12 @@ class WhisperXTranscription(Transcription):
         print(title)
         print("-" * len(title))
         for i, sentence_info in enumerate(self.get_sentence_info(predicted)):
-            print("sentence: '{}'".format(sentence_info['sentence']))
+            print("sentence: '{}'".format(sentence_info["sentence"]))
             print("sentenceIndex: {}".format(i))
-            print("startChar: {}".format(sentence_info['startChar']), end=" | ")
-            print("endChar: {}".format(sentence_info['endChar']))
-            print("startTime: {}".format(sentence_info['startTime']), end=" | ")
-            print("endTime: {}\n".format(sentence_info['endTime']))
+            print("startChar: {}".format(sentence_info["startChar"]), end=" | ")
+            print("endChar: {}".format(sentence_info["endChar"]))
+            print("startTime: {}".format(sentence_info["startTime"]), end=" | ")
+            print("endTime: {}\n".format(sentence_info["endTime"]))
 
     def _init_from_json_file(self, json_file: JsonFile) -> None:
         """
@@ -1085,9 +1085,8 @@ class WhisperXTranscription(Transcription):
             logging.error(err_msg)
             raise ValueError(err_msg)
         if search_window_size <= 1:
-            err_msg = (
-                "search_window_size must be greater than 0, not '{}'"
-                "".format(search_window_size)
+            err_msg = "search_window_size must be greater than 0, not '{}'" "".format(
+                search_window_size
             )
             logging.error(err_msg)
             raise ValueError(err_msg)
@@ -1252,7 +1251,7 @@ class WhisperXTranscription(Transcription):
                 self.get_source_software(),
                 self.get_time_spawned(),
                 self.get_language(),
-                self.get_num_speakers()
+                self.get_num_speakers(),
             )
         )
         return transcription

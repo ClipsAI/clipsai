@@ -13,7 +13,7 @@ SECS_PER_DAY = 86400
 # SI prefixes
 GIGA = 10**9
 NANO = 10 ** (-9)
-GIBI = 1024 ** 3
+GIBI = 1024**3
 
 SECS_IDX = 0
 MINUTES_IDX = 1

@@ -140,9 +140,8 @@ class Dir(FileSystemObject):
 
         # check if the path is a valid directory
         if os.path.isdir(self._path) is False:
-            return (
-                "'{}' is a valid {} but not a valid {}."
-                "".format(self._path, super().get_type(), self.get_type())
+            return "'{}' is a valid {} but not a valid {}." "".format(
+                self._path, super().get_type(), self.get_type()
             )
 
         return None

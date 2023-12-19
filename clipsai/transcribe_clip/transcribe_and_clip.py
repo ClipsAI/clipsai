@@ -14,7 +14,7 @@ from .transcriber import Transcriber
 from ..media.audio_file import AudioFile
 
 
-class TranscribeAndClip():
+class TranscribeAndClip:
     """
     Class that transcribes and clips an asset.
     """

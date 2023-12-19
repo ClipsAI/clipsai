@@ -107,9 +107,8 @@ class TextTilerConfigManager(ConfigManager):
         """
         pool_methods = ["mean", "max"]
         if pool_method not in pool_methods:
-            return (
-                "pool_method must be one of {} not '{}'"
-                "".format(pool_methods, pool_method)
+            return "pool_method must be one of {} not '{}'" "".format(
+                pool_methods, pool_method
             )
 
         return None
@@ -173,9 +172,8 @@ class TextTilerConfigManager(ConfigManager):
             return err
 
         if smoothing_width < 3:
-            return (
-                "smoothing_width must be greater than 2, not '{}'"
-                "".format(smoothing_width)
+            return "smoothing_width must be greater than 2, not '{}'" "".format(
+                smoothing_width
             )
 
         return None
@@ -199,9 +197,8 @@ class TextTilerConfigManager(ConfigManager):
         """
         cutoff_policies = ["average", "low", "high"]
         if cutoff_policy not in cutoff_policies:
-            return (
-                "cutoff_policy must be one of {} not '{}'"
-                "".format(cutoff_policies, cutoff_policy)
+            return "cutoff_policy must be one of {} not '{}'" "".format(
+                cutoff_policies, cutoff_policy
             )
 
         return None

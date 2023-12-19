@@ -91,9 +91,8 @@ class File(FileSystemObject):
 
         # check if the path is a valid File
         if os.path.isfile(self._path) is False:
-            return (
-                "'{}' is a valid {} but not a valid {}."
-                "".format(self._path, super().get_type(), self.get_type())
+            return "'{}' is a valid {} but not a valid {}." "".format(
+                self._path, super().get_type(), self.get_type()
             )
 
         return None
@@ -271,14 +270,8 @@ class File(FileSystemObject):
             not.
         """
         if self.get_file_extension() != extension:
-            return (
-                "{} '{}' should have extension '{}' not '{}'."
-                "".format(
-                    self.get_type(),
-                    self._path,
-                    extension,
-                    self.get_file_extension()
-                )
+            return "{} '{}' should have extension '{}' not '{}'." "".format(
+                self.get_type(), self._path, extension, self.get_file_extension()
             )
 
     def has_file_extension(self, extension: str) -> bool:

@@ -233,7 +233,9 @@ class TypeChecker:
         if len(data_keys - correct_types_keys) > 0:
             debug_msg = (
                 "Keys '{}' are in 'data' but are not in 'correct_data_types'"
-                "".format(data_keys - correct_types_keys, )
+                "".format(
+                    data_keys - correct_types_keys,
+                )
             )
             logging.debug(debug_msg)
         # check if 'correct_data_types' has keys 'data' doesn't have

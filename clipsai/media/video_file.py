@@ -318,7 +318,7 @@ class VideoFile(TemporalMediaFile):
         image_file = self.extract_frame(
             extract_sec=extract_sec,
             dest_image_file_path=thumbnail_file_path,
-            overwrite=overwrite
+            overwrite=overwrite,
         )
 
         # failure

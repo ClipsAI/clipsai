@@ -79,12 +79,12 @@ class ExceptionHandler:
             err_type = type(exc_value).__name__
             err_msg = str(exc_value)
             message = (
-                "Error Type: {} | ".format(err_type) +
-                "Filename: {} | ".format(stack.filename) +
-                "Stack Name: {} | ".format(stack.name) +
-                "Line Number: {} | ".format(stack.lineno) +
-                "Line of Code Responsible: {!r} | ".format(stack.line) +
-                "Error Message: {} | ".format(err_msg)
+                "Error Type: {} | ".format(err_type)
+                + "Filename: {} | ".format(stack.filename)
+                + "Stack Name: {} | ".format(stack.name)
+                + "Line Number: {} | ".format(stack.lineno)
+                + "Line of Code Responsible: {!r} | ".format(stack.line)
+                + "Error Message: {} | ".format(err_msg)
             )
             stack_trace_info.append(message + " " + "#" * 10 + " ")
         return stack_trace_info

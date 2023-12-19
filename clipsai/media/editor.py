@@ -280,9 +280,8 @@ class MediaEditor:
             num_threads,
         )
         if copied_media_file is None:
-            msg = (
-                "Copying media file '{}' to '{}' was unsuccessful."
-                "".format(media_file.path, copied_media_file_path)
+            msg = "Copying media file '{}' to '{}' was unsuccessful." "".format(
+                media_file.path, copied_media_file_path
             )
             logging.error(msg)
             return None
@@ -513,14 +512,14 @@ class MediaEditor:
         duration_hms_time_format = seconds_to_hms_time_format(duration_secs)
 
         resize_tried = (
-            crop_x is not None and
-            crop_y is not None and
-            crop_width is not None and
-            crop_height is not None
+            crop_x is not None
+            and crop_y is not None
+            and crop_width is not None
+            and crop_height is not None
         )
 
         filter_complex_parts = []
-        if (resize_tried):
+        if resize_tried:
             filter_complex_parts.append(
                 "crop={width}:{height}:{x}:{y}[cropped]".format(
                     width=crop_width, height=crop_height, x=crop_x, y=crop_y
@@ -847,16 +846,16 @@ class MediaEditor:
         )
 
         msg = (
-            "\n{'-' * 40}\n" +
-            "video_file path: '{}'\n".format(video_file.path) +
-            "audio_file path: '{}'\n".format(video_file.path) +
-            "merged_video_file_path: '{}'\n".format(merged_video_file_path) +
-            "audio_codec: '{}'\n".format(audio_codec) +
-            "video_codec: '{}'\n".format(video_codec) +
-            "Terminal return code: '{}'\n".format(result.returncode) +
-            "Output: '{}'\n".format(result.stdout) +
-            "Err Output: '{}'\n".format(result.stderr) +
             "\n{'-' * 40}\n"
+            + "video_file path: '{}'\n".format(video_file.path)
+            + "audio_file path: '{}'\n".format(video_file.path)
+            + "merged_video_file_path: '{}'\n".format(merged_video_file_path)
+            + "audio_codec: '{}'\n".format(audio_codec)
+            + "video_codec: '{}'\n".format(video_codec)
+            + "Terminal return code: '{}'\n".format(result.returncode)
+            + "Output: '{}'\n".format(result.stdout)
+            + "Err Output: '{}'\n".format(result.stderr)
+            + "\n{'-' * 40}\n"
         )
         # failure
         if result.returncode != SUCCESS:
@@ -1087,9 +1086,9 @@ class MediaEditor:
         )
 
         msg = (
-            "Terminal return code: '{}'\n".format(result.returncode) +
-            "Output: '{}'\n".format(result.stdout) +
-            "Err Output: '{}'\n".format(result.stderr)
+            "Terminal return code: '{}'\n".format(result.returncode)
+            + "Output: '{}'\n".format(result.stdout)
+            + "Err Output: '{}'\n".format(result.stderr)
         )
         # failure
         if result.returncode != SUCCESS:
@@ -1487,8 +1486,7 @@ class MediaEditor:
             msg = (
                 "media_file_to_copy_type_of '{}' must be a VideoFile, AudioFile, or "
                 "ImageFile, not {}.".format(
-                    media_file_to_copy_type_of.path,
-                    type(media_file_to_copy_type_of)
+                    media_file_to_copy_type_of.path, type(media_file_to_copy_type_of)
                 )
             )
             logging.error(msg)

@@ -1,8 +1,8 @@
 from .transcribe_clip.transcribe_and_clip import TranscribeAndClip
+
 # from .resize.resize import Resize
 __all__ = ["TranscribeAndClip"]
 # __all__ = ["TranscribeAndClip", "Resize"]
-
 
 
 # now the user can do:
