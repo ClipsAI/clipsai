@@ -10,9 +10,9 @@ from .exceptions import TextTileClipFinderError
 from .texttile_config_manager import TextTileClipFinderConfigManager
 
 # local package imports
-from ml.embed.roberta import RobertaTextEmbedder
-from ml.texttile.texttiler import TextTiler
-from transcription.whisperx import WhisperXTranscription
+from ..embed.roberta import RobertaTextEmbedder
+from ..texttile.texttiler import TextTiler
+from ...transcription.whisperx import WhisperXTranscription
 
 # 3rd party imports
 import torch

@@ -6,12 +6,12 @@ import logging
 import os
 
 # local package imports
-from utils.k8s import K8S_PVC_DIR_PATH
-from media.audio_file import AudioFile
-from transcription.whisperx import WhisperXTranscription
+from ..utils.k8s import K8S_PVC_DIR_PATH
+from ..media.audio_file import AudioFile
+from ..transcription.whisperx import WhisperXTranscription
 
 # machine learning imports
-from ml.transcribe.whisperx import WhisperXTranscriber
+from ..ml.transcribe.whisperx import WhisperXTranscriber
 
 
 class Transcriber():
@@ -39,7 +39,7 @@ class Transcriber():
         WhisperXTranscription
             the transcription of the asset media
         """
-        logging.info("TRANSCRIBING ASSET MEDIA")
+        logging.info("USING WHISPER TO TRANSCRIBE MEDIA FILE")
 
         # transcribe
         transcriber = WhisperXTranscriber(

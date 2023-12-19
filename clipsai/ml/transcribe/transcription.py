@@ -11,7 +11,7 @@ import abc
 from datetime import datetime
 
 # local imports
-from ..filesys.json_file import JsonFile
+from ...filesys.json_file import JsonFile
 
 
 class Transcription(abc.ABC):

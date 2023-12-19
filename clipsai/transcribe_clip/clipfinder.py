@@ -5,11 +5,10 @@ Finding clips in a asset's media.
 import logging
 
 # local package imports
-from transcription.whisperx import WhisperXTranscription
-from media.temporal_media_file import TemporalMediaFile
+from ..transcription.whisperx import WhisperXTranscription
 
 # machine learning imports
-from ml.clipfind.texttile import TextTileClipFinder
+from ..ml.clipfind.texttile import TextTileClipFinder
 
 
 class ClipFinder():
@@ -19,17 +18,14 @@ class ClipFinder():
 
     def build(
         self,
-        temporal_media_file: TemporalMediaFile,
         transcription: WhisperXTranscription,
         texttile_config: dict,
     ) -> list[dict]:
         """
-        Finds clips from the temporal_media_file.
+        Finds clips using the transcription.
 
         Parameters
         ----------
-        temporal_media_file: TemporalMediaFile
-            the media file to find clips from
         transcription: WhisperXTranscription
             the transcription of the asset media
         texttile_config: dict
@@ -40,7 +36,7 @@ class ClipFinder():
         list[dict]
             list of clips found in the asset's media
         """
-        logging.info("FINDING CLIPS IN MEDIA")
+        logging.info("FINDING CLIPS IN MEDIA FILE")
 
         # find clips
         clip_finder = TextTileClipFinder(

@@ -17,11 +17,11 @@ from .exceptions import WhisperXTranscriptionError
 from .transcription import Transcription
 
 # local imports
-from filesys.json_file import JsonFile
-from filesys.manager import FileSystemManager
-from filesys.pdf_file import PdfFile
-from filesys.srt_file import SrtFile
-from utils.type_checker import TypeChecker
+from ..filesys.json_file import JsonFile
+from ..filesys.manager import FileSystemManager
+from ..filesys.pdf_file import PdfFile
+from ..filesys.srt_file import SrtFile
+from ..utils.type_checker import TypeChecker
 
 # 3rd party imports
 import nltk

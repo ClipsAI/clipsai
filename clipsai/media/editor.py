@@ -17,11 +17,11 @@ from .temporal_media_file import TemporalMediaFile
 from .video_file import VideoFile
 
 # local imports
-from filesys.file import File
-from filesys.manager import FileSystemManager
-from utils.conversions import seconds_to_hms_time_format
-from utils.type_checker import TypeChecker
-from utils.k8s import K8S_PVC_DIR_PATH
+from ..filesys.file import File
+from ..filesys.manager import FileSystemManager
+from ..utils.conversions import seconds_to_hms_time_format
+from ..utils.type_checker import TypeChecker
+from ..utils.k8s import K8S_PVC_DIR_PATH
 
 
 # ffmpeg return code of 0 means success; any other (positive) integer means failure
