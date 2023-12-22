@@ -7,7 +7,7 @@ setup(
     url='https://github.com/ClipsAI/clip',
     author='ClipsAI',
     author_email='support@clipsai.com',
-    license='GPLv3',
+    license='MIT',
     packages=['clipsai'],
     # we need to go through pyproject.toml and determine what dependencies we need
     install_requires=[
