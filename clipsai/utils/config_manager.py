@@ -6,10 +6,10 @@ settings for machine learning model classes.
 import abc
 
 # current package imports
-from .exceptions import MLConfigError
+from exceptions import ConfigError
 
 # local package imports
-from ..utils.type_checker import TypeChecker
+from .type_checker import TypeChecker
 
 
 class ConfigManager(abc.ABC):
@@ -79,4 +79,4 @@ class ConfigManager(abc.ABC):
         """
         error = self.check_valid_config(config)
         if error is not None:
-            raise MLConfigError(error)
+            raise ConfigError(error)

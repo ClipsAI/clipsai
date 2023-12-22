@@ -5,10 +5,10 @@ Finding clips in a asset's media.
 import logging
 
 # local package imports
-from ..transcription.whisperx import WhisperXTranscription
+from ..transcribe.whisperx_transcription import WhisperXTranscription
 
 # machine learning imports
-from ..ml.clipfind.texttile import TextTileClipFinder
+from .texttile import TextTileClipFinder
 
 
 class ClipFinder:

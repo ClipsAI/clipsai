@@ -5,14 +5,14 @@ Finding clips with AudioFiles using the TextTiling algorithm.
 import logging
 
 # current package imports
-from .clipfinder import ClipFinder
+from .clipfind import ClipFinder
 from .exceptions import TextTileClipFinderError
 from .texttile_config_manager import TextTileClipFinderConfigManager
 
 # local package imports
-from ..embed.roberta import RobertaTextEmbedder
-from ..texttile.texttiler import TextTiler
-from ...transcription.whisperx import WhisperXTranscription
+from ..transcribe.texttile.roberta import RobertaTextEmbedder
+from ..transcribe.texttile.texttiler import TextTiler
+from ..transcribe.whisperx_transcription import WhisperXTranscription
 
 # 3rd party imports
 import torch

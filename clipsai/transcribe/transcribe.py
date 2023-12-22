@@ -5,16 +5,15 @@ Processes a request to transcribe and clip a media file.
 import logging
 
 # current package imports
-from .clip_request_validator import TranscribeAndClipRequestValidator
+# from ..clipfinder.clip_request_validator import TranscribeAndClipRequestValidator
 
 # local package imports
 from ..utils.exception_handler import ExceptionHandler
-from .clipfinder import ClipFinder
-from .transcriber import Transcriber
+from transcriber import Transcriber
 from ..media.audio_file import AudioFile
 
 
-class TranscribeAndClip:
+class Transcribe:
     """
     Class that transcribes and clips an asset.
     """
@@ -62,7 +61,7 @@ class TranscribeAndClip:
 
             return {"state": "failed"}
 
-        # run the worker process
+        # run the transcribe and clip process
         try:
             return self._run(request_data)
         # failure
@@ -116,35 +115,35 @@ class TranscribeAndClip:
 
         # find clips in the media file
         logging.info("FINDING ASSET CLIPS")
-        clip_finder = ClipFinder()
-        texttile_config = {
-            "cutoff_policy": request_data["cutoffPolicy"],
-            "device": request_data["computeDevice"],
-            "embedding_aggregation_pool_method": request_data[
-                "embeddingAggregationPoolMethod"
-            ],
-            "min_clip_duration_secs": request_data["minClipTime"],
-            "max_clip_duration_secs": request_data["maxClipTime"],
-            "smoothing_width": request_data["smoothingWidth"],
-            "window_compare_pool_method": request_data["windowComparePoolMethod"],
-        }
-        clip_infos = clip_finder.build(media_file, transcript, texttile_config)
+        # clip_finder = ClipFinder()
+        # texttile_config = {
+        #     "cutoff_policy": request_data["cutoffPolicy"],
+        #     "device": request_data["computeDevice"],
+        #     "embedding_aggregation_pool_method": request_data[
+        #         "embeddingAggregationPoolMethod"
+        #     ],
+        #     "min_clip_duration_secs": request_data["minClipTime"],
+        #     "max_clip_duration_secs": request_data["maxClipTime"],
+        #     "smoothing_width": request_data["smoothingWidth"],
+        #     "window_compare_pool_method": request_data["windowComparePoolMethod"],
+        # }
+        # clip_infos = clip_finder.build(media_file, transcript, texttile_config)
 
-        logging.info("POPULATING CLIPS DICT")
-        clips = []
-        for clip_info in clip_infos:
-            clip = {}
-            clip["startChar"] = clip_info["startChar"]
-            clip["endChar"] = clip_info["endChar"]
-            clip["startTime"] = clip_info["startTime"]
-            clip["endTime"] = clip_info["endTime"]
-            clip["norm"] = clip_info["norm"]  # what is this?
-            clips.append(clip)
+        # logging.info("POPULATING CLIPS DICT")
+        # clips = []
+        # for clip_info in clip_infos:
+        #     clip = {}
+        #     clip["startChar"] = clip_info["startChar"]
+        #     clip["endChar"] = clip_info["endChar"]
+        #     clip["startTime"] = clip_info["startTime"]
+        #     clip["endTime"] = clip_info["endTime"]
+        #     clip["norm"] = clip_info["norm"]  # what is this?
+        #     clips.append(clip)
 
-        # success
-        logging.info("SUCCESSFULLY TRANSCRIBED AND CLIPPED")
+        # # success
+        # logging.info("SUCCESSFULLY TRANSCRIBED AND CLIPPED")
 
-        return clips
+        # return clips
 
     def _handle_exception(self, e: Exception, request_data: dict) -> dict:
         """

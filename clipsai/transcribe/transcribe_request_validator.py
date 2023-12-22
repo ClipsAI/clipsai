@@ -1,21 +1,20 @@
 """
-Request validator for TranscribeAndClip.
+Request validator for Transcribep.
 """
 # local package imports
-from ..ml.clipfind.texttile_config_manager import TextTileClipFinderConfigManager
-from ..ml.transcribe.whisperx_config_manager import WhisperXTranscriberConfigManager
 from ..utils.pytorch import check_valid_torch_device
 from ..request_validator import RequestValidator
+from .whisperx_config_manager import WhisperXTranscriberConfigManager
 
 
-class TranscribeAndClipRequestValidator(RequestValidator):
+class TranscribeRequestValidator(RequestValidator):
     """
-    RequestValidator Class for TranscribeAndClip.
+    RequestValidator Class for Transcribe.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the TranscribeAndClipRequestValidator class.
+        Initialize the TranscribeRequestValidator class.
         """
         super().__init__()
 
@@ -77,22 +76,6 @@ class TranscribeAndClipRequestValidator(RequestValidator):
         }
         whisperx_config_manager = WhisperXTranscriberConfigManager()
         error = whisperx_config_manager.check_valid_config(whisperx_config)
-        if error is not None:
-            return error
-
-        # TextTiler Configuration
-        texttile_config = {
-            "cutoff_policy": request_data["cutoffPolicy"],
-            "embedding_aggregation_pool_method": request_data[
-                "embeddingAggregationPoolMethod"
-            ],
-            "max_clip_duration_secs": request_data["maxClipTime"],
-            "min_clip_duration_secs": request_data["minClipTime"],
-            "smoothing_width": request_data["smoothingWidth"],
-            "window_compare_pool_method": request_data["windowComparePoolMethod"],
-        }
-        texttile_config_manager = TextTileClipFinderConfigManager()
-        error = texttile_config_manager.check_valid_config(texttile_config)
         if error is not None:
             return error
 

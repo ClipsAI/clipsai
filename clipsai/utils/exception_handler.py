@@ -8,7 +8,7 @@ import traceback
 # local package imports
 from ..exceptions import InvalidRequestError, InvalidRequestDataError
 from ..media.exceptions import NoAudioStreamError
-from ..ml.transcribe.exceptions import NoSpeechError
+from ..transcribe.exceptions import NoSpeechError
 
 
 class ExceptionHandler:

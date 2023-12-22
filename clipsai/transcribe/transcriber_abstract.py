@@ -5,7 +5,7 @@ Defines an abstract class for transcribing audio files.
 import abc
 
 # local imports
-from ...media.audio_file import AudioFile
+from ..media.audio_file import AudioFile
 from .transcription import Transcription
 
 

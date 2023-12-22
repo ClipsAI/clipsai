@@ -13,3 +13,8 @@ class TimerError(Exception):
 
 class EnvironmentVariableNotSetError(Exception):
     pass
+
+
+# for when config manager fails
+class ConfigError(Exception):
+    pass

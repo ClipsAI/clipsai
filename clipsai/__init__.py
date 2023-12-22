@@ -1,7 +1,8 @@
-from .transcribe_clip.transcribe_and_clip import TranscribeAndClip
+from .transcribe.transcribe import Transcribe
+from .clip.clip import Clip
 
 # from .resize.resize import Resize
-__all__ = ["TranscribeAndClip"]
+__all__ = ["Transcribe", "Clip", "Resize"]
 # __all__ = ["TranscribeAndClip", "Resize"]
 
 
@@ -11,3 +12,4 @@ __all__ = ["TranscribeAndClip"]
 # # Example usage
 # transcribe_clip = TranscribeAndClip()
 # result = transcribe_clip.run(request_data)
+

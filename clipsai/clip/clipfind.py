@@ -2,7 +2,7 @@
 Defines an abstract class for finding clips within some media.
 """
 # local package imports
-from ...utils.pytorch import get_compute_device, assert_compute_device_available
+from ..utils.pytorch import get_compute_device, assert_compute_device_available
 
 
 class ClipFinder:

@@ -8,10 +8,10 @@ import os
 # local package imports
 from ..utils.k8s import K8S_PVC_DIR_PATH
 from ..media.audio_file import AudioFile
-from ..transcription.whisperx import WhisperXTranscription
+from whisperx_transcription import WhisperXTranscription
 
 # machine learning imports
-from ..ml.transcribe.whisperx import WhisperXTranscriber
+from whisperx_transcriber import WhisperXTranscriber
 
 
 class Transcriber:

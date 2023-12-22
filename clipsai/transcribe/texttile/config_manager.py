@@ -2,7 +2,7 @@
 Configuration manager for TextTile algorithm.
 """
 # local package imports
-from ..config_manager import ConfigManager
+from ...utils.config_manager import ConfigManager
 from ...utils.utils import find_missing_dict_keys
 
 
