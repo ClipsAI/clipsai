@@ -12,7 +12,6 @@ import logging
 # current package imports
 from .exceptions import NoSpeechError
 from .whisperx_config_manager import WhisperXTranscriberConfigManager
-from .transcriber_abstract import Transcriber
 
 # local imports
 from ..media.audio_file import AudioFile
@@ -25,7 +24,7 @@ import torch
 import whisperx
 
 
-class WhisperXTranscriber(Transcriber):
+class WhisperXTranscriber():
     """
     A class to transcribe using whisperx.
     """

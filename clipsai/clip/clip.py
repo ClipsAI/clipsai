@@ -103,7 +103,7 @@ class Clip:
         # we already validates that the request data is valid, including the file path
         media_file = AudioFile(request_data["mediaFilePath"])
         # transcribe the media file DONT NEED TO DO THIS HERE
-        logging.info("TRANSCRIBING ASSET")
+        logging.debug("TRANSCRIBING ASSET")
         transcriber = Transcriber()
         transcribe_config = {
             "model_size": request_data["whisperModelSize"],
@@ -114,7 +114,7 @@ class Clip:
         transcript = transcriber.build(media_file, transcribe_config)
 
         # find clips in the media file
-        logging.info("FINDING ASSET CLIPS")
+        logging.debug("FINDING ASSET CLIPS")
         clip_finder = ClipFinder()
         texttile_config = {
             "cutoff_policy": request_data["cutoffPolicy"],
@@ -129,7 +129,7 @@ class Clip:
         }
         clip_infos = clip_finder.build(media_file, transcript, texttile_config)
 
-        logging.info("POPULATING CLIPS DICT")
+        logging.debug("POPULATING CLIPS DICT")
         clips = []
         for clip_info in clip_infos:
             clip = {}
@@ -141,7 +141,7 @@ class Clip:
             clips.append(clip)
 
         # success
-        logging.info("SUCCESSFULLY TRANSCRIBED AND CLIPPED")
+        logging.debug("SUCCESSFULLY TRANSCRIBED AND CLIPPED")
 
         return clips
 

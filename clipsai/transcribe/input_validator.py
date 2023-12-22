@@ -1,19 +1,20 @@
 """
-Parameter Input Validator for TranscribeAndClip.
+Parameter Input Validator for Transcribe.
 """
 # local package imports
 from ..utils.pytorch import check_valid_torch_device
 from ..input_validator import InputValidator
-from .texttile_config_manager import TextTileClipFinderConfigManager
+from .whisperx_config_manager import WhisperXTranscriberConfigManager
 
-class ClipInputValidator(InputValidator):
+
+class TranscribeInputValidator(InputValidator):
     """
-    InputValidator Class for TranscribeAndClip.
+    InputValidator Class for Transcribe.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the ClipInputValidator class.
+        Initialize the TranscribeInputValidator class.
         """
         super().__init__()
 
@@ -35,12 +36,9 @@ class ClipInputValidator(InputValidator):
         correct_types = {
             "mediaFilePath": (str),
             "computeDevice": (str, type(None)),
-            "cutoffPolicy": (str),
-            "embeddingAggregationPoolMethod": (str),
-            "minClipTime": (float, int),
-            "maxClipTime": (float, int),
-            "smoothingWidth": (int),
-            "windowComparePoolMethod": (str),
+            "precision": (str, type(None)),
+            "languageCode": (str, type(None)),
+            "whisperModelSize": (str, type(None)),
         }
 
         # existence and type check
@@ -48,7 +46,7 @@ class ClipInputValidator(InputValidator):
         if error is not None:
             return error
 
-        # file extension check
+        # mediaFilePath
         media_file_path: str = input_data["mediaFilePath"]
         if not media_file_path.endswith((".mp3", ".mp4")):
             error = "mediaFilePath must be of type mp3 or mp4. Received: {}".format(
@@ -62,19 +60,14 @@ class ClipInputValidator(InputValidator):
             if error is not None:
                 return error
 
-        # TextTiler Configuration
-        texttile_config = {
-            "cutoff_policy": input_data["cutoffPolicy"],
-            "embedding_aggregation_pool_method": input_data[
-                "embeddingAggregationPoolMethod"
-            ],
-            "max_clip_duration_secs": input_data["maxClipTime"],
-            "min_clip_duration_secs": input_data["minClipTime"],
-            "smoothing_width": input_data["smoothingWidth"],
-            "window_compare_pool_method": input_data["windowComparePoolMethod"],
+        # WhisperXTranscriber configuration
+        whisperx_config = {
+            "language": input_data["languageCode"],
+            "model_size": input_data["whisperModelSize"],
+            "precision": input_data["precision"],
         }
-        texttile_config_manager = TextTileClipFinderConfigManager()
-        error = texttile_config_manager.check_valid_config(texttile_config)
+        whisperx_config_manager = WhisperXTranscriberConfigManager()
+        error = whisperx_config_manager.check_valid_config(whisperx_config)
         if error is not None:
             return error
 
@@ -94,14 +87,12 @@ class ClipInputValidator(InputValidator):
         dict
             The imputed input data.
         """
+        # setting to none allows whisper to choose the default
         optional_fields_default_values = {
             "computeDevice": None,
-            "cutoffPolicy": "high",
-            "embeddingAggregationPoolMethod": "max",
-            "minClipTime": 15,
-            "maxClipTime": 900,
-            "smoothingWidth": 3,
-            "windowComparePoolMethod": "mean",
+            "precision": None,
+            "languageCode": "en",
+            "whisperModelSize": None,
         }
 
         for key in optional_fields_default_values.keys():

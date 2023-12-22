@@ -2,12 +2,16 @@
 Exceptions that can be raised by the transcribe package.
 """
 # local package imports
-from ..exceptions import MLConfigError
+from ..exceptions import InvalidInputDataError
 
 
-class WhisperXTranscriberConfigError(MLConfigError):
+class WhisperXTranscriberConfigError(InvalidInputDataError):
     pass
 
 
-class NoSpeechError(Exception):
+class NoSpeechError(WhisperXTranscriberConfigError):
+    pass
+
+
+class WhisperXTranscriptionError(NoSpeechError):
     pass

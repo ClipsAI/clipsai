@@ -171,7 +171,7 @@ class MediaEditor:
 
         # only add the crop filter if cropping parameters are provided
         if crop_height is not None and crop_width is not None and crop_x is not None:
-            logging.info("Trim with resizing.")
+            logging.debug("Trim with resizing.")
             original_height = int(media_file.get_stream_info("v", "height"))
             crop_y = max(original_height // 2 - crop_height // 2, 0)
             crop_vf = "crop={width}:{height}:{x}:{y}".format(
@@ -181,7 +181,7 @@ class MediaEditor:
 
         ffmpeg_command.append(trimmed_media_file_path)
 
-        logging.info("ffmpeg_command: %s", ffmpeg_command)
+        logging.debug("ffmpeg_command: %s", ffmpeg_command)
         result = subprocess.run(
             ffmpeg_command,
             capture_output=True,
@@ -551,7 +551,7 @@ class MediaEditor:
 
         # Join all filter parts
         filter_complex = ";".join(filter_complex_parts).strip(";")
-        # logging.info("filter_complex: %s", filter_complex)
+        # logging.debug("filter_complex: %s", filter_complex)
 
         result = subprocess.run(
             [
@@ -614,11 +614,11 @@ class MediaEditor:
             logging.error(err_msg)
             return None
         # success
-        logging.info("Watermarking video file successful")
+        logging.debug("Watermarking video file successful")
         watermarked_video_file = self._create_media_file_of_same_type(
             watermarked_video_file_path, video_file
         )
-        logging.info("Watermarked video file created")
+        logging.debug("Watermarked video file created")
         return watermarked_video_file
 
     def watermark_corner_of_video(
@@ -703,7 +703,7 @@ class MediaEditor:
         crop_y = None
 
         if crop_height is not None:
-            logging.info("Watermark with resizing.")
+            logging.debug("Watermark with resizing.")
             crop_y = max(original_height // 2 - crop_height // 2, 0)
 
         corner_commands = {
@@ -731,7 +731,7 @@ class MediaEditor:
         # video height <= video width
         else:
             size_dim = "h"
-        logging.info("entering watermarking and cropping")
+        logging.debug("entering watermarking and cropping")
         return self.watermark_and_crop_video(
             video_file=video_file,
             watermark_file=watermark_file,
@@ -784,7 +784,7 @@ class MediaEditor:
         overwrite: bool
             Overwrites 'audio_file_path' if True; does not overwrite if False
         audio_codec: str
-            compression and decompression sfotware for the audio (aac)
+            compression and decompression software for the audio (aac)
         video_codec: str
             compression and decompression software for the video (libx264)
 
@@ -923,12 +923,12 @@ class MediaEditor:
             )
         )
         # log contents of media_paths_file
-        logging.info("media_paths_file contents: %s", media_file_paths)
+        logging.debug("media_paths_file contents: %s", media_file_paths)
         media_paths_file.create(media_file_paths)
-        logging.info("media_paths_file path: %s", media_paths_file.path)
+        logging.debug("media_paths_file path: %s", media_paths_file.path)
 
         # concatenate media_files
-        logging.info("Concatenating media files in editor")
+        logging.debug("Concatenating media files in editor")
         result = subprocess.run(
             [
                 "ffmpeg",
@@ -945,7 +945,7 @@ class MediaEditor:
                 concatenated_media_file_path,
             ]
         )
-        logging.info("Concatenation complete")
+        logging.debug("Concatenation complete")
         media_paths_file.delete()
 
         msg = (

@@ -2,8 +2,8 @@
 Config manager for TextTileClipFinder.
 """
 # local package imports
-from ..transcribe.texttile.config_manager import TextTilerConfigManager
-from ..utils.utils import find_missing_dict_keys
+from .config_manager import TextTilerConfigManager
+from ...utils.utils import find_missing_dict_keys
 
 
 class TextTileClipFinderConfigManager(TextTilerConfigManager):

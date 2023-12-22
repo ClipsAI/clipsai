@@ -14,7 +14,6 @@ import logging
 
 # current package imports
 from .exceptions import WhisperXTranscriptionError
-from .transcription import Transcription
 
 # local imports
 from ..filesys.json_file import JsonFile
@@ -30,7 +29,7 @@ from nltk.tokenize import sent_tokenize
 nltk.download("punkt")
 
 
-class WhisperXTranscription(Transcription):
+class WhisperXTranscription():
     """
     A class for whisperx transcription data viewing, storage, and manipulation.
     """
@@ -40,7 +39,7 @@ class WhisperXTranscription(Transcription):
         transcription: dict or JsonFile,
     ) -> None:
         """
-        Initialize WhisperXTranscription
+        Initialize WhisperXTranscription Class.
 
         Parameters
         ----------
@@ -561,7 +560,7 @@ class WhisperXTranscription(Transcription):
         # create srt file
         srt_file.create(subtitles)
         srt_file.assert_exists()
-        logging.info("srt file created at {}".format(srt_file.get_path()))
+        logging.debug("srt file created at {}".format(srt_file.get_path()))
         return srt_file
 
     def store_as_pdf_file(
@@ -1072,7 +1071,7 @@ class WhisperXTranscription(Transcription):
         correct_char_idx: int or None
             the char_idx scuh that char_info[char_idx] == correct_char
         """
-        logging.info(
+        logging.debug(
             "Realigning char_idx '{}' with the correct starting character "
             "'{}' for the sentence.".format(char_idx, correct_char)
         )

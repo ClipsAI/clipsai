@@ -8,7 +8,7 @@ import logging
 from ..transcribe.whisperx_transcription import WhisperXTranscription
 
 # machine learning imports
-from .texttile import TextTileClipFinder
+from .texttile.texttiler import TextTileClipFinder
 
 
 class ClipFinder:
@@ -36,7 +36,7 @@ class ClipFinder:
         list[dict]
             list of clips found in the asset's media
         """
-        logging.info("FINDING CLIPS IN MEDIA FILE")
+        logging.debug("FINDING CLIPS IN MEDIA FILE")
 
         # find clips
         clip_finder = TextTileClipFinder(

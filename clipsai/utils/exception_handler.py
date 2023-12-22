@@ -6,7 +6,7 @@ import sys
 import traceback
 
 # local package imports
-from ..exceptions import InvalidRequestError, InvalidRequestDataError
+from ..exceptions import InvalidInputDataError
 from ..media.exceptions import NoAudioStreamError
 from ..transcribe.exceptions import NoSpeechError
 
@@ -19,14 +19,11 @@ class ExceptionHandler:
     # Status Codes
     SUCCESS = 0
 
-    # Invalid Client Requests
-    INVALID_REQUEST = SUCCESS + 1
-
-    # Invalid Request Data
-    INVALID_REQUEST_DATA = INVALID_REQUEST + 1
+    # Invalid Input Data
+    INVALID_INPUT_DATA = SUCCESS + 1
 
     # Files must have an audio stream to transcribed
-    NO_SPEECH_ERROR = INVALID_REQUEST_DATA + 1
+    NO_SPEECH_ERROR = INVALID_INPUT_DATA + 1
 
     # Other
     OTHER = NO_SPEECH_ERROR + 1
@@ -45,11 +42,9 @@ class ExceptionHandler:
         status_code: int
             CAI status code representing that particular error
         """
-        if isinstance(e, InvalidRequestError):
-            return self.INVALID_REQUEST
 
-        elif isinstance(e, InvalidRequestDataError):
-            return self.INVALID_REQUEST_DATA
+        if isinstance(e, InvalidInputDataError):
+            return self.INVALID_INPUT_DATA
 
         elif isinstance(e, NoAudioStreamError):
             return self.NO_SPEECH_ERROR
