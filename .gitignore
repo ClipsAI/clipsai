@@ -194,9 +194,8 @@ Dockerfile
 # Continuous Integration tools
 *.log
 
-# Local development
-sandbox/
-clipsai/sandbox/
+# Local Data
+clipsai/data
 
 # Ignore macOS system files
 .DS_Store
