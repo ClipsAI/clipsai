@@ -2,14 +2,14 @@
 Configuration manager for TextTile algorithm.
 """
 # local package imports
-from ...utils.config_manager import ConfigManager
-from ...utils.utils import find_missing_dict_keys
+from ..utils.config_manager import ConfigManager
+from ..utils.utils import find_missing_dict_keys
 
 
 class TextTilerConfigManager(ConfigManager):
     """
-    A class for getting information about and validating TextTiler configuration
-    settings.
+    A class for getting information about and validating
+    TextTiler configuration settings.
     """
 
     def __init__(self) -> None:
@@ -25,8 +25,8 @@ class TextTilerConfigManager(ConfigManager):
         texttile_config: dict,
     ) -> str or None:
         """
-        Checks that 'texttile_config' contains valid configuration settings. Returns
-        None if valid, a descriptive error message if invalid.
+        Checks that 'texttile_config' contains valid configuration settings.
+        Returns None if valid, a descriptive error message if invalid.
 
         Parameters
         ----------

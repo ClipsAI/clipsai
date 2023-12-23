@@ -1,15 +1,12 @@
 """
 Embed text using the Roberta model.
 """
-# local package imports
-from .text import TextEmbedder
-
 # 3rd party imports
 import torch
 from sentence_transformers import SentenceTransformer
 
 
-class RobertaTextEmbedder(TextEmbedder):
+class RobertaTextEmbedder():
     """
     A class for embedding text using the Roberta model.
     """

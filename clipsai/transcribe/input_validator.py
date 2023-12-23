@@ -88,6 +88,11 @@ class TranscribeInputValidator(InputValidator):
             The imputed input data.
         """
         # setting to none allows whisper to choose the default
+        if input_data["computeDevice"] == "auto":
+            input_data["computeDevice"] = None
+        if input_data["languageCode"] == "auto":
+            input_data["languageCode"] = None
+
         optional_fields_default_values = {
             "computeDevice": None,
             "precision": None,

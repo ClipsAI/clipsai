@@ -1,10 +1,13 @@
 """
 Parameter Input Validator for TranscribeAndClip.
 """
+# current package imports
+from texttile_config_manager import TextTileClipFinderConfigManager
+
 # local package imports
 from ..utils.pytorch import check_valid_torch_device
 from ..input_validator import InputValidator
-from .texttile_config_manager import TextTileClipFinderConfigManager
+
 
 class ClipInputValidator(InputValidator):
     """
@@ -33,7 +36,6 @@ class ClipInputValidator(InputValidator):
             None if the input data is valid, a descriptive error message if not.
         """
         correct_types = {
-            "mediaFilePath": (str),
             "computeDevice": (str, type(None)),
             "cutoffPolicy": (str),
             "embeddingAggregationPoolMethod": (str),
@@ -94,6 +96,8 @@ class ClipInputValidator(InputValidator):
         dict
             The imputed input data.
         """
+        if input_data["computeDevice"] == "auto":
+            input_data["computeDevice"] = None
         optional_fields_default_values = {
             "computeDevice": None,
             "cutoffPolicy": "high",

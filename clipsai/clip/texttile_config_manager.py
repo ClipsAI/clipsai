@@ -1,9 +1,11 @@
 """
 Config manager for TextTileClipFinder.
 """
+# current package imports
+from config_manager import TextTilerConfigManager
+
 # local package imports
-from .config_manager import TextTilerConfigManager
-from ...utils.utils import find_missing_dict_keys
+from ..utils.utils import find_missing_dict_keys
 
 
 class TextTileClipFinderConfigManager(TextTilerConfigManager):
