@@ -50,8 +50,11 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+<<<<<<< HEAD
 tests/
 .history/
+=======
+>>>>>>> main
 
 # Translations
 *.mo
@@ -196,9 +199,8 @@ Dockerfile
 # Continuous Integration tools
 *.log
 
-# Local development
-sandbox/
-clipsai/sandbox/
+# Local Data
+clipsai/data
 
 # Ignore macOS system files
 .DS_Store

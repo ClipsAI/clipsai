@@ -7,7 +7,7 @@ setup(
     url='https://github.com/ClipsAI/clip',
     author='ClipsAI',
     author_email='support@clipsai.com',
-    license='GPLv3',
+    license='MIT',
     packages=['clipsai'],
     # we need to go through pyproject.toml and determine what dependencies we need
     install_requires=[
@@ -22,10 +22,13 @@ setup(
         'whisperx@git+https://github.com/m-bain/whisperx.git',
         'sentence-transformers',
         'matplotlib',
-        'opencv-python',
+        'av',
+        'cv2',
         'pynvml',
         'scenedetect',
         'facenet-pytorch',
+        'pyannote.audio',
+        'pyannote.core',
     ],
     zip_safe=False
 )

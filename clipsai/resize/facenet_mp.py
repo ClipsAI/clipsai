@@ -11,13 +11,12 @@ import logging
 # current package imports
 from .exceptions import FaceNetMediaPipeResizerError
 from .rect import Rect
+from utils import pytorch
+from .image import extract_frames, calc_img_bytes
 
 # local package imports
 from media.editor import MediaEditor
 from media.video_file import VideoFile
-from ml.utils.image import extract_frames, calc_img_bytes
-from ml.utils import pytorch
-from sklearn.cluster import KMeans
 from utils.conversions import bytes_to_gibibytes
 
 # 3rd party imports
@@ -25,6 +24,7 @@ import cv2
 from facenet_pytorch import MTCNN
 import mediapipe as mp
 import numpy as np
+from sklearn.cluster import KMeans
 import torch
 
 

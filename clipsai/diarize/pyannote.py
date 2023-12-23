@@ -1,5 +1,5 @@
 """
-Diarize an audio file using pyannote/speaker-diarization-3.0
+Diarize an audio file using pyannote/speaker-diarization-3.1
 
 Notes
 -----
@@ -8,7 +8,7 @@ inference part) and one Intel Cascade Lake 6248 CPU (for the clustering part).
 In other words, it takes approximately 1.5 minutes to process a one hour conversation.
 
 - The technical details of the model are described in
- https://huggingface.co/pyannote/speaker-diarization/blob/main/technical_report_2.1.pdf
+ https://huggingface.co/pyannote/speaker-diarization-3.0
 
 - pyannote/speaker-diarization allows setting a number of speakers to detect. Could be
 viable to analyze different subsections of the video, detect the number of faces, and
@@ -19,8 +19,7 @@ import logging
 
 # local package imports
 from media.audio_file import AudioFile
-from ml.utils.pytorch import get_compute_device, assert_compute_device_available
-from utils.secrets import Secrets
+from utils.pytorch import get_compute_device, assert_compute_device_available
 
 # third party imports
 from pyannote.audio import Pipeline
@@ -33,7 +32,7 @@ class PyannoteDiarizer:
     A class for diarizing audio files using pyannote.
     """
 
-    def __init__(self, device: str = None) -> None:
+    def __init__(self, auth_token: str, device: str = None) -> None:
         """
         Initialize PyannoteDiarizer
 
@@ -52,7 +51,7 @@ class PyannoteDiarizer:
 
         self.pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.0",
-            use_auth_token=Secrets().PYANNOTE_SPEAKER_DIARIZATION,
+            use_auth_token=auth_token,
         ).to(torch.device(device))
         logging.debug("Pyannote using device: {}".format(self.pipeline.device))
 
