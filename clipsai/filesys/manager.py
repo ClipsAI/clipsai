@@ -11,7 +11,7 @@ from .dir import Dir
 from .object import FileSystemObject
 
 # local imports
-from ..utils.type_checker import TypeChecker
+from utils.type_checker import TypeChecker
 
 
 class FileSystemManager:

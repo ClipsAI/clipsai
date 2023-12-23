@@ -3,11 +3,14 @@ Utility functions for PyTorch.
 """
 # standard package imports
 import logging
+import random
 
 # local package imports
 from .exceptions import InvalidComputeDeviceError
 
 # 3rd party imports
+import psutil
+import pynvml
 import torch
 
 
@@ -154,6 +157,23 @@ def check_compute_device_available(device: str) -> str or None:
     # 'cpu' is always available
     return None
 
+def is_compute_device_available(device: str) -> bool:
+    """
+    Returns True if 'device' is valid for CAI backend and is available for performing
+    computation on the current machine, False otherwise.
+
+    Parameters
+    ----------
+    device: str
+        device to perform computation on
+
+    Returns
+    -------
+    bool
+        True if 'device' is valid for CAI backend and is available for performing
+        computation on the current machine, False otherwise.
+    """
+    return check_compute_device_available(device) is None
 
 def assert_compute_device_available(device: str) -> None:
     """
@@ -223,3 +243,64 @@ def max_magnitude_2d(tensor: torch.tensor, dim: int) -> torch.tensor:
         max_tensor = tensor[range(dim0), max_idcs]
 
     return max_tensor
+
+def reset_seed(number):
+    """
+    Reset random seed to the specific number
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    number: A seed number to use
+    """
+    random.seed(number)
+    torch.manual_seed(number)
+
+def mem_stats() -> dict:
+    """
+    Returns a dictionary containing the memory statistics for the given device.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    dict
+        dictionary containing the memory statistics for GPU and CPU. The dictionary
+        contains the following keys:
+            - "gpu": dictionary containing the following keys:
+                - "total": total GPU memory
+                - "free": free GPU memory
+            - "cpu": dictionary containing the following keys:
+                - "total": total CPU memory
+                - "free": free CPU memory
+    """
+    # get the free gpu memory
+    total_gpu_memory = 0
+    free_gpu_memory = 0
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        pynvml.nvmlInit()
+        h = pynvml.nvmlDeviceGetHandleByIndex(0)
+        info = pynvml.nvmlDeviceGetMemoryInfo(h)
+        total_gpu_memory = info.total
+        free_gpu_memory = info.free
+
+    # get free cpu memory
+    total_cpu_memory = psutil.virtual_memory().total
+    free_cpu_memory = psutil.virtual_memory().available
+
+    return {
+        "gpu": {
+            "total": total_gpu_memory,
+            "free": free_gpu_memory
+        },
+        "cpu": {
+            "total": total_cpu_memory,
+            "free": free_cpu_memory
+        }
+    }

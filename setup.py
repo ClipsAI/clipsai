@@ -17,15 +17,18 @@ setup(
         'scipy',
         'torch',
         'nltk',
-        'magic',
+        'python-magic',
         'reportlab',
         'whisperx@git+https://github.com/m-bain/whisperx.git',
         'sentence-transformers',
         'matplotlib',
+        'av',
         'cv2',
         'pynvml',
         'scenedetect'
         'facenet-pytorch',
+        'pyannote.audio',
+        'pyannote.core',
     ],
     zip_safe=False
 )
