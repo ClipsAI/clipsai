@@ -15,7 +15,6 @@ from .exceptions import NoAudioStreamError, NoVideoStreamError
 from ..filesys.dir import Dir
 from ..filesys.file import File
 from ..filesys.manager import FileSystemManager
-from ..utils.k8s import K8S_PVC_DIR_PATH
 
 
 SUCCESS = 0

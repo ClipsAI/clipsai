@@ -6,7 +6,7 @@ settings for machine learning model classes.
 import abc
 
 # current package imports
-from exceptions import ConfigError
+from .exceptions import ConfigError
 
 # local package imports
 from .type_checker import TypeChecker

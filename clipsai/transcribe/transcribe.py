@@ -6,9 +6,8 @@ prerequisite to clipping it.
 import logging
 
 # current package imports
-from input_validator import TranscribeInputValidator
-from whisperx_transcriber import WhisperXTranscriber
-from whisperx_transcription import WhisperXTranscription
+from .whisperx_transcriber import WhisperXTranscriber
+from .whisperx_transcription import WhisperXTranscription
 
 # local package imports
 from ..utils.exception_handler import ExceptionHandler

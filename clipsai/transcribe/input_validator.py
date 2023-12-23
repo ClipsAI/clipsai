@@ -1,10 +1,12 @@
 """
 Parameter Input Validator for Transcribe.
 """
+# current package imports
+from .whisperx_config_manager import WhisperXTranscriberConfigManager
+
 # local package imports
 from ..utils.pytorch import check_valid_torch_device
 from ..input_validator import InputValidator
-from .whisperx_config_manager import WhisperXTranscriberConfigManager
 
 
 class TranscribeInputValidator(InputValidator):

@@ -12,10 +12,10 @@ import logging
 # current package imports
 from .exceptions import NoSpeechError
 from .whisperx_config_manager import WhisperXTranscriberConfigManager
+from .whisperx_transcription import WhisperXTranscription
 
 # local imports
 from ..media.audio_file import AudioFile
-from whisperx_transcription import WhisperXTranscription
 from ..utils.type_checker import TypeChecker
 from ..utils.pytorch import assert_valid_torch_device
 

@@ -18,8 +18,6 @@ from .exceptions import WhisperXTranscriptionError
 # local imports
 from ..filesys.json_file import JsonFile
 from ..filesys.manager import FileSystemManager
-from ..filesys.pdf_file import PdfFile
-from ..filesys.srt_file import SrtFile
 from ..utils.type_checker import TypeChecker
 
 # 3rd party imports
@@ -521,89 +519,89 @@ class WhisperXTranscription:
         else:
             return right + 1 if right == -1 else right
 
-    def store_as_srt_file(
-        self,
-        file_path: str,
-        start_time: float = None,
-        end_time: float = None,
-    ) -> SrtFile:
-        """
-        Stores the transcription as a srt file. Overwrites 'dest_file_path' if already
-        exists.
+    # def store_as_srt_file(
+    #     self,
+    #     file_path: str,
+    #     start_time: float = None,
+    #     end_time: float = None,
+    # ) -> SrtFile:
+    #     """
+    #     Stores the transcription as a srt file. Overwrites 'dest_file_path' if already
+    #     exists.
 
-        Parameters
-        ----------
-        file_path: str
-            absolute file path to store the transcription as a srt file
-        start_time: float
-            start time of the transcript in seconds
-        end_time: float
-            end time of the transcript in seconds
+    #     Parameters
+    #     ----------
+    #     file_path: str
+    #         absolute file path to store the transcription as a srt file
+    #     start_time: float
+    #         start time of the transcript in seconds
+    #     end_time: float
+    #         end time of the transcript in seconds
 
-        Returns
-        -------
-        File
-            the srt file
-        """
-        # check valid file path
-        srt_file = SrtFile(file_path)
-        srt_file.assert_has_file_extension("srt")
-        self._fs_manager.assert_parent_dir_exists(srt_file)
+    #     Returns
+    #     -------
+    #     File
+    #         the srt file
+    #     """
+    #     # check valid file path
+    #     srt_file = SrtFile(file_path)
+    #     srt_file.assert_has_file_extension("srt")
+    #     self._fs_manager.assert_parent_dir_exists(srt_file)
 
-        # delete old file to write new one
-        srt_file.delete()
+    #     # delete old file to write new one
+    #     srt_file.delete()
 
-        # build subtitles
-        word_info = self.get_word_info(False, start_time, end_time)
-        subtitles = self._build_subtitles(word_info, max_subtitle_length=32)
+    #     # build subtitles
+    #     word_info = self.get_word_info(False, start_time, end_time)
+    #     subtitles = self._build_subtitles(word_info, max_subtitle_length=32)
 
-        # create srt file
-        srt_file.create(subtitles)
-        srt_file.assert_exists()
-        logging.debug("srt file created at {}".format(srt_file.get_path()))
-        return srt_file
+    #     # create srt file
+    #     srt_file.create(subtitles)
+    #     srt_file.assert_exists()
+    #     logging.debug("srt file created at {}".format(srt_file.get_path()))
+    #     return srt_file
 
-    def store_as_pdf_file(
-        self,
-        file_path: str,
-        start_time: float = None,
-        end_time: float = None,
-    ) -> PdfFile:
-        """
-        Stores the transcription as a pdf file. Overwrites 'dest_file_path' if already
-        exists.
+    # def store_as_pdf_file(
+    #     self,
+    #     file_path: str,
+    #     start_time: float = None,
+    #     end_time: float = None,
+    # ) -> PdfFile:
+    #     """
+    #     Stores the transcription as a pdf file. Overwrites 'dest_file_path' if already
+    #     exists.
 
-        Parameters
-        ----------
-        file_path: str
-            absolute file path to store the transcription as a PDF file.
-        start_time: float
-            start time of the transcript to store as a pdf file in seconds
-        end_time: float
-            start time of the transcript to store as a pdf file in seconds
+    #     Parameters
+    #     ----------
+    #     file_path: str
+    #         absolute file path to store the transcription as a PDF file.
+    #     start_time: float
+    #         start time of the transcript to store as a pdf file in seconds
+    #     end_time: float
+    #         start time of the transcript to store as a pdf file in seconds
 
-        Returns
-        -------
-        None
-        """
-        pdf_file = PdfFile(file_path)
-        pdf_file.assert_has_file_extension("pdf")
-        self._fs_manager.assert_parent_dir_exists(pdf_file)
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     pdf_file = PdfFile(file_path)
+    #     pdf_file.assert_has_file_extension("pdf")
+    #     self._fs_manager.assert_parent_dir_exists(pdf_file)
 
-        # delete old file to write new one
-        pdf_file.delete()
+    #     # delete old file to write new one
+    #     pdf_file.delete()
 
-        # build paragraphs
-        sentence_info = self.get_sentence_info(False, start_time, end_time)
-        sentences = [sent["sentence"] for sent in sentence_info]
-        num_sentences_per_paragraph = 5
-        paragraphs = []
-        for i in range(0, len(sentences), num_sentences_per_paragraph):
-            paragraphs.append(" ".join(sentences[i : i + num_sentences_per_paragraph]))
+    #     # build paragraphs
+    #     sentence_info = self.get_sentence_info(False, start_time, end_time)
+    #     sentences = [sent["sentence"] for sent in sentence_info]
+    #     num_sentences_per_paragraph = 5
+    #     paragraphs = []
+    #     for i in range(0, len(sentences), num_sentences_per_paragraph):
+    #         paragraphs.append(" ".join(sentences[i : i + num_sentences_per_paragraph]))
 
-        pdf_file.create(paragraphs)
-        pdf_file.assert_exists()
-        return pdf_file
+    #     pdf_file.create(paragraphs)
+    #     pdf_file.assert_exists()
+    #     return pdf_file
 
     def print_char_info(self, predicted: bool) -> None:
         """

@@ -1,11 +1,9 @@
 """
 Exceptions that can be raised by the transcribe package.
 """
-# local package imports
-from ..exceptions import InvalidInputDataError
 
 
-class WhisperXTranscriberConfigError(InvalidInputDataError):
+class WhisperXTranscriberConfigError(Exception):
     pass
 
 

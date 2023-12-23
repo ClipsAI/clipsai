@@ -15,6 +15,9 @@ class EnvironmentVariableNotSetError(Exception):
     pass
 
 
-# for when config manager fails
+class InvalidInputDataError(Exception):
+    pass
+
+
 class ConfigError(Exception):
     pass

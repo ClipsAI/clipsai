@@ -6,9 +6,8 @@ import sys
 import traceback
 
 # local package imports
-from ..exceptions import InvalidInputDataError
-from ..media.exceptions import NoAudioStreamError
-from ..transcribe.exceptions import NoSpeechError
+from exceptions import InvalidInputDataError
+from transcribe.exceptions import NoSpeechError
 
 
 class ExceptionHandler:
@@ -45,9 +44,6 @@ class ExceptionHandler:
 
         if isinstance(e, InvalidInputDataError):
             return self.INVALID_INPUT_DATA
-
-        elif isinstance(e, NoAudioStreamError):
-            return self.NO_SPEECH_ERROR
 
         elif isinstance(e, NoSpeechError):
             return self.NO_SPEECH_ERROR

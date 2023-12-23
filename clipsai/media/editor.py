@@ -4,8 +4,8 @@ Editing media files with ffmpeg.
 # standard library imports
 import logging
 import subprocess
-import os
-import uuid
+# import os
+# import uuid
 
 # current package imports
 from .exceptions import MediaEditorError
@@ -17,11 +17,10 @@ from .temporal_media_file import TemporalMediaFile
 from .video_file import VideoFile
 
 # local imports
-from ..filesys.file import File
+# from ..filesys.file import File
 from ..filesys.manager import FileSystemManager
 from ..utils.conversions import seconds_to_hms_time_format
 from ..utils.type_checker import TypeChecker
-from ..utils.k8s import K8S_PVC_DIR_PATH
 
 
 # ffmpeg return code of 0 means success; any other (positive) integer means failure
@@ -872,104 +871,104 @@ class MediaEditor:
             merged_video_file = VideoFile(merged_video_file_path)
             return merged_video_file
 
-    def concatenate(
-        self,
-        media_files: list[TemporalMediaFile],
-        concatenated_media_file_path: str,
-        overwrite: bool = True,
-    ) -> MediaFile or None:
-        """
-        Concatenate media_files into a single media file.
+    # def concatenate(
+    #     self,
+    #     media_files: list[TemporalMediaFile],
+    #     concatenated_media_file_path: str,
+    #     overwrite: bool = True,
+    # ) -> MediaFile or None:
+    #     """
+    #     Concatenate media_files into a single media file.
 
-        Parameters
-        ----------
-        media_files: list[TemporalMediaFile]
-            list of media files to concatenate
-        concatenated_media_file_path: str
-            absolute path to store the concatenated media file
-        overwrite: bool
-            Overwrites'concatenated_media_file_path if True; does not overwrite if False
+    #     Parameters
+    #     ----------
+    #     media_files: list[TemporalMediaFile]
+    #         list of media files to concatenate
+    #     concatenated_media_file_path: str
+    #         absolute path to store the concatenated media file
+    #     overwrite: bool
+    #         Overwrites'concatenated_media_file_path if True; does not overwrite if False
 
-        Returns
-        -------
-        MediaFile or None
-            the concatenated media file if successful; None if unsuccessful
-        """
-        if overwrite is True:
-            self._file_system_manager.assert_parent_dir_exists(
-                TemporalMediaFile(concatenated_media_file_path)
-            )
-        else:
-            self._file_system_manager.assert_valid_path_for_new_fs_object(
-                concatenated_media_file_path
-            )
-        # assert media_files exist
-        for i, media in enumerate(media_files):
-            media.assert_exists()
-            self._file_system_manager.assert_paths_not_equal(
-                media.path,
-                concatenated_media_file_path,
-                "temporal_media{} path".format(i),
-                "concatenated_media_file_path",
-            )
+    #     Returns
+    #     -------
+    #     MediaFile or None
+    #         the concatenated media file if successful; None if unsuccessful
+    #     """
+    #     if overwrite is True:
+    #         self._file_system_manager.assert_parent_dir_exists(
+    #             TemporalMediaFile(concatenated_media_file_path)
+    #         )
+    #     else:
+    #         self._file_system_manager.assert_valid_path_for_new_fs_object(
+    #             concatenated_media_file_path
+    #         )
+    #     # assert media_files exist
+    #     for i, media in enumerate(media_files):
+    #         media.assert_exists()
+    #         self._file_system_manager.assert_paths_not_equal(
+    #             media.path,
+    #             concatenated_media_file_path,
+    #             "temporal_media{} path".format(i),
+    #             "concatenated_media_file_path",
+    #         )
 
-        # create a file containing the paths to each media file
-        media_file_paths = ""
-        for media_file in media_files:
-            media_file_paths += "file '{}'\n".format(media_file.path)
-        media_paths_file = File(
-            os.path.join(
-                K8S_PVC_DIR_PATH, "{}_media_file_paths.txt".format(uuid.uuid4().hex)
-            )
-        )
-        # log contents of media_paths_file
-        logging.debug("media_paths_file contents: %s", media_file_paths)
-        media_paths_file.create(media_file_paths)
-        logging.debug("media_paths_file path: %s", media_paths_file.path)
+    #     # create a file containing the paths to each media file
+    #     media_file_paths = ""
+    #     for media_file in media_files:
+    #         media_file_paths += "file '{}'\n".format(media_file.path)
+    #     media_paths_file = File(
+    #         os.path.join(
+    #             K8S_PVC_DIR_PATH, "{}_media_file_paths.txt".format(uuid.uuid4().hex)
+    #         )
+    #     )
+    #     # log contents of media_paths_file
+    #     logging.debug("media_paths_file contents: %s", media_file_paths)
+    #     media_paths_file.create(media_file_paths)
+    #     logging.debug("media_paths_file path: %s", media_paths_file.path)
 
-        # concatenate media_files
-        logging.debug("Concatenating media files in editor")
-        result = subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                media_paths_file.path,
-                # add to remove blank screen at beginning of output
-                "-vf",
-                "setpts=PTS-STARTPTS",
-                concatenated_media_file_path,
-            ]
-        )
-        logging.debug("Concatenation complete")
-        media_paths_file.delete()
+    #     # concatenate media_files
+    #     logging.debug("Concatenating media files in editor")
+    #     result = subprocess.run(
+    #         [
+    #             "ffmpeg",
+    #             "-y",
+    #             "-f",
+    #             "concat",
+    #             "-safe",
+    #             "0",
+    #             "-i",
+    #             media_paths_file.path,
+    #             # add to remove blank screen at beginning of output
+    #             "-vf",
+    #             "setpts=PTS-STARTPTS",
+    #             concatenated_media_file_path,
+    #         ]
+    #     )
+    #     logging.debug("Concatenation complete")
+    #     media_paths_file.delete()
 
-        msg = (
-            "Terminal return code: '{}'\n"
-            "Output: '{}'\n"
-            "Err Output: '{}'\n"
-            "".format(result.returncode, result.stdout, result.stderr)
-        )
-        # failure
-        if result.returncode != SUCCESS:
-            err_msg = (
-                "Error in FFmpeg command for concatenating segments. Here is some "
-                "helpful troubleshooting information:\n {}".format(msg)
-            )
-            logging.error(err_msg)
-            return None
+    #     msg = (
+    #         "Terminal return code: '{}'\n"
+    #         "Output: '{}'\n"
+    #         "Err Output: '{}'\n"
+    #         "".format(result.returncode, result.stdout, result.stderr)
+    #     )
+    #     # failure
+    #     if result.returncode != SUCCESS:
+    #         err_msg = (
+    #             "Error in FFmpeg command for concatenating segments. Here is some "
+    #             "helpful troubleshooting information:\n {}".format(msg)
+    #         )
+    #         logging.error(err_msg)
+    #         return None
 
-        # success
-        else:
-            media_file = self._create_media_file_of_same_type(
-                concatenated_media_file_path, media_files[0]
-            )
-            media_file.assert_exists()
-            return media_file
+    #     # success
+    #     else:
+    #         media_file = self._create_media_file_of_same_type(
+    #             concatenated_media_file_path, media_files[0]
+    #         )
+    #         media_file.assert_exists()
+    #         return media_file
 
     def crop_video(
         self,
@@ -1107,129 +1106,129 @@ class MediaEditor:
             # cropped_video_file.assert_exists()
             return cropped_video_file
 
-    def resize_video(
-        self,
-        original_video_file: VideoFile,
-        resized_video_file_path: str,
-        width: int,
-        height: int,
-        segments: list[dict],
-        audio_codec: str = "aac",
-        video_codec: str = "libx264",
-        crf: str = "18",
-        preset: str = "veryfast",
-        num_threads: str = "0",
-        overwrite: bool = True,
-    ) -> VideoFile or None:
-        """
-        Crop a series of videos from a video file to resize the video file
+    # def resize_video(
+    #     self,
+    #     original_video_file: VideoFile,
+    #     resized_video_file_path: str,
+    #     width: int,
+    #     height: int,
+    #     segments: list[dict],
+    #     audio_codec: str = "aac",
+    #     video_codec: str = "libx264",
+    #     crf: str = "18",
+    #     preset: str = "veryfast",
+    #     num_threads: str = "0",
+    #     overwrite: bool = True,
+    # ) -> VideoFile or None:
+    #     """
+    #     Crop a series of videos from a video file to resize the video file
 
-        Parameters
-        ----------
-        original_video_file: VideoFile
-            the video file to crop
-        resized_video_file_path: str
-            absolute path to store the resized video file
-        segments: list[dict]
-            list of dictionaries where each dictionary is a distinct segment to crop
-            the video. Each dictionary has the following keys:
-            x: int
-                x-coordinate of the top left corner of the cropped video segment
-            y: int
-                y-coordinate of the top left corner of the cropped video segment
-            startTime: float
-                the time in seconds to begin the cropped segment
-            endTime: float
-                the time in seconds to end the cropped segment
-        audio_codec: str
-            compression and decompression sfotware for the audio (aac)
-        video_codec: str
-            compression and decompression software for the video (libx264)
-        crf: str
-            constant rate factor - an encoding mode that adjusts the file data rate up
-            or down to achieve a selected quality level rather than a specific data
-            rate. CRF values range from 0 to 51, with lower numbers delivering higher
-            quality scores
-        preset: str
-            the encoding speed to compression ratio. A slower preset will provide
-            better compression (compression is quality per filesize)
-        num_threads: str
-            the number of threads to use for encoding
-        overwrite: bool
-            Overwrites 'resized_video_file_path' if True; does not overwrite if False
+    #     Parameters
+    #     ----------
+    #     original_video_file: VideoFile
+    #         the video file to crop
+    #     resized_video_file_path: str
+    #         absolute path to store the resized video file
+    #     segments: list[dict]
+    #         list of dictionaries where each dictionary is a distinct segment to crop
+    #         the video. Each dictionary has the following keys:
+    #         x: int
+    #             x-coordinate of the top left corner of the cropped video segment
+    #         y: int
+    #             y-coordinate of the top left corner of the cropped video segment
+    #         startTime: float
+    #             the time in seconds to begin the cropped segment
+    #         endTime: float
+    #             the time in seconds to end the cropped segment
+    #     audio_codec: str
+    #         compression and decompression sfotware for the audio (aac)
+    #     video_codec: str
+    #         compression and decompression software for the video (libx264)
+    #     crf: str
+    #         constant rate factor - an encoding mode that adjusts the file data rate up
+    #         or down to achieve a selected quality level rather than a specific data
+    #         rate. CRF values range from 0 to 51, with lower numbers delivering higher
+    #         quality scores
+    #     preset: str
+    #         the encoding speed to compression ratio. A slower preset will provide
+    #         better compression (compression is quality per filesize)
+    #     num_threads: str
+    #         the number of threads to use for encoding
+    #     overwrite: bool
+    #         Overwrites 'resized_video_file_path' if True; does not overwrite if False
 
-        Returns
-        -------
-        VideoFile or None
-            the cropped video if successful; None if unsuccessful
-        """
-        self.assert_valid_media_file(original_video_file, VideoFile)
-        if overwrite is True:
-            self._file_system_manager.assert_parent_dir_exists(
-                VideoFile(resized_video_file_path)
-            )
-        else:
-            self._file_system_manager.assert_valid_path_for_new_fs_object(
-                resized_video_file_path
-            )
-        self._file_system_manager.assert_paths_not_equal(
-            original_video_file.path,
-            resized_video_file_path,
-            "original_video_file path",
-            "resized_video_file_path",
-        )
+    #     Returns
+    #     -------
+    #     VideoFile or None
+    #         the cropped video if successful; None if unsuccessful
+    #     """
+    #     self.assert_valid_media_file(original_video_file, VideoFile)
+    #     if overwrite is True:
+    #         self._file_system_manager.assert_parent_dir_exists(
+    #             VideoFile(resized_video_file_path)
+    #         )
+    #     else:
+    #         self._file_system_manager.assert_valid_path_for_new_fs_object(
+    #             resized_video_file_path
+    #         )
+    #     self._file_system_manager.assert_paths_not_equal(
+    #         original_video_file.path,
+    #         resized_video_file_path,
+    #         "original_video_file path",
+    #         "resized_video_file_path",
+    #     )
 
-        # crop each segment
-        cropped_video_files: list[VideoFile] = []
-        for i, segment in enumerate(segments):
-            cropped_video_file_path = os.path.join(
-                K8S_PVC_DIR_PATH, "{}_segment_{}.mp4".format(uuid.uuid4().hex, i)
-            )
-            cropped_video_file = self.crop_video(
-                original_video_file=original_video_file,
-                cropped_video_file_path=cropped_video_file_path,
-                x=segment["x"],
-                y=segment["y"],
-                width=width,
-                height=height,
-                start_sec=segment["startTime"],
-                end_sec=segment["endTime"],
-                audio_codec=audio_codec,
-                video_codec=video_codec,
-                crf=crf,
-                preset=preset,
-                num_threads=num_threads,
-                overwrite=overwrite,
-            )
-            # failure
-            if cropped_video_file is None:
-                err = (
-                    "Error in cropping video segment {} with segment information '{}'."
-                    "".format(i, segment)
-                )
-                logging.error(err)
-                return None
-            # success
-            else:
-                cropped_video_files.append(cropped_video_file)
+    #     # crop each segment
+    #     cropped_video_files: list[VideoFile] = []
+    #     for i, segment in enumerate(segments):
+    #         cropped_video_file_path = os.path.join(
+    #             K8S_PVC_DIR_PATH, "{}_segment_{}.mp4".format(uuid.uuid4().hex, i)
+    #         )
+    #         cropped_video_file = self.crop_video(
+    #             original_video_file=original_video_file,
+    #             cropped_video_file_path=cropped_video_file_path,
+    #             x=segment["x"],
+    #             y=segment["y"],
+    #             width=width,
+    #             height=height,
+    #             start_sec=segment["startTime"],
+    #             end_sec=segment["endTime"],
+    #             audio_codec=audio_codec,
+    #             video_codec=video_codec,
+    #             crf=crf,
+    #             preset=preset,
+    #             num_threads=num_threads,
+    #             overwrite=overwrite,
+    #         )
+    #         # failure
+    #         if cropped_video_file is None:
+    #             err = (
+    #                 "Error in cropping video segment {} with segment information '{}'."
+    #                 "".format(i, segment)
+    #             )
+    #             logging.error(err)
+    #             return None
+    #         # success
+    #         else:
+    #             cropped_video_files.append(cropped_video_file)
 
-        # concatenate cropped segments
-        resized_video_file = self.concatenate(
-            media_files=cropped_video_files,
-            concatenated_media_file_path=resized_video_file_path,
-            overwrite=overwrite,
-        )
-        # delete cropped segments
-        for cropped_video_file in cropped_video_files:
-            cropped_video_file.delete()
+    #     # concatenate cropped segments
+    #     resized_video_file = self.concatenate(
+    #         media_files=cropped_video_files,
+    #         concatenated_media_file_path=resized_video_file_path,
+    #         overwrite=overwrite,
+    #     )
+    #     # delete cropped segments
+    #     for cropped_video_file in cropped_video_files:
+    #         cropped_video_file.delete()
 
-        # failure
-        if resized_video_file is None:
-            return None
-        # success
-        else:
-            resized_video_file.assert_exists()
-            return resized_video_file
+    #     # failure
+    #     if resized_video_file is None:
+    #         return None
+    #     # success
+    #     else:
+    #         resized_video_file.assert_exists()
+    #         return resized_video_file
 
     def instantiate_as_temporal_media_file(
         self, media_file_path: str
