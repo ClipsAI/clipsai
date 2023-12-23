@@ -16,9 +16,7 @@ from ..media.audio_file import AudioFile
 
 
 def transcribe(
-    media_file_path: str,
-    language_code: str = "auto",
-    device: str = "auto"
+    media_file_path: str, language_code: str = "auto", device: str = "auto"
 ) -> WhisperXTranscription:
     """
     Takes in a file in the form of mp3 or mp4 and transcribes it using whisper.

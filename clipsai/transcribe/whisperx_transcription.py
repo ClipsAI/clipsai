@@ -29,7 +29,7 @@ from nltk.tokenize import sent_tokenize
 nltk.download("punkt")
 
 
-class WhisperXTranscription():
+class WhisperXTranscription:
     """
     A class for whisperx transcription data viewing, storage, and manipulation.
     """

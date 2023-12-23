@@ -24,7 +24,7 @@ import torch
 import whisperx
 
 
-class WhisperXTranscriber():
+class WhisperXTranscriber:
     """
     A class to transcribe using whisperx.
     """

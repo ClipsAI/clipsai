@@ -20,7 +20,7 @@ import torch
 BOUNDARY = 1
 
 
-class TextTileClipFinder():
+class TextTileClipFinder:
     """
     A class for finding clips within some audio file using the TextTiling Algorithm.
     """

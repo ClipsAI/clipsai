@@ -93,10 +93,9 @@ def clip(
             clip["endChar"] = clip_info["endChar"]
             clips.append(clip)
 
-        # success
         logging.debug("FINISHED CLIPPING MEDIA FILE")
         return clips
-    # failure
+
     except Exception as e:
         status_code = ExceptionHandler.get_status_code(e)
         err_msg = str(e)
