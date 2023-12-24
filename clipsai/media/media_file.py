@@ -15,7 +15,6 @@ from .exceptions import NoAudioStreamError, NoVideoStreamError
 from filesys.dir import Dir
 from filesys.file import File
 from filesys.manager import FileSystemManager
-from utils.k8s import K8S_PVC_DIR_PATH
 
 
 SUCCESS = 0
@@ -494,7 +493,7 @@ class MediaFile(File):
             the path to the temp frames folder
         """
         # create the temp frames folder
-        frames_dir = Dir(os.path.join(K8S_PVC_DIR_PATH, str(uuid.uuid4())))
+        frames_dir = Dir(os.path.join("/temp", str(uuid.uuid4())))
         if frames_dir.exists():
             frames_dir.delete_contents()
         else:

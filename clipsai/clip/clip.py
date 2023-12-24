@@ -5,12 +5,12 @@ Processes a request to transcribe and clip a media file.
 import logging
 
 # current package imports
-from input_validator import ClipInputValidator
-from texttile import TextTileClipFinder
+from .clip_input_validator import ClipInputValidator
+from .texttile import TextTileClipFinder
 
 # local package imports
-from ..utils.exception_handler import ExceptionHandler
-from ..transcribe.whisperx_transcription import WhisperXTranscription
+from utils.exception_handler import ExceptionHandler
+from transcribe.whisperx_transcription import WhisperXTranscription
 
 
 def clip(
@@ -41,22 +41,24 @@ def clip(
         start_time, and end_time.
     """
     # validate the input request data
-    input_data = {
-        "computeDevice": device,
-        "cutoffPolicy": "high",
-        "embeddingAggregationPoolMethod": "max",
-        "minClipTime": min_clip_time,
-        "maxClipTime": max_clip_time,
-        "smoothingWidth": 3,
-        "windowComparePoolMethod": "mean",
-    }
     try:
-        input_data = ClipInputValidator.impute_input_data_defaults(input_data)
-        ClipInputValidator.assert_valid_input_data(input_data)
+        clip_input_validator = ClipInputValidator()
+        exception_handler = ExceptionHandler()
+        temp_data = {
+            "computeDevice": device,
+            "cutoffPolicy": "high",
+            "embeddingAggregationPoolMethod": "max",
+            "minClipTime": min_clip_time,
+            "maxClipTime": max_clip_time,
+            "smoothingWidth": 3,
+            "windowComparePoolMethod": "mean",
+        }
+        input_data = clip_input_validator.impute_input_data_defaults(temp_data)
+        clip_input_validator.assert_valid_input_data(input_data)
     except Exception as e:
-        status_code = ExceptionHandler.get_status_code(e)
+        status_code = exception_handler.get_status_code(e)
         err_msg = str(e)
-        stack_trace = ExceptionHandler.get_stack_trace_info()
+        stack_trace = exception_handler.get_stack_trace_info()
 
         error_info = {
             "success": False,
@@ -72,14 +74,14 @@ def clip(
         logging.debug("FINDING ASSET CLIPS")
         clip_finder = TextTileClipFinder(
             device=input_data["computeDevice"],
-            min_clip_duration_secs=input_data["min_clip_duration_secs"],
-            max_clip_duration_secs=input_data["max_clip_duration_secs"],
-            cutoff_policy=input_data["cutoff_policy"],
+            min_clip_duration_secs=input_data["minClipTime"],
+            max_clip_duration_secs=input_data["maxClipTime"],
+            cutoff_policy=input_data["cutoffPolicy"],
             embedding_aggregation_pool_method=input_data[
-                "embedding_aggregation_pool_method"
+                "embeddingAggregationPoolMethod"
             ],
-            smoothing_width=input_data["smoothing_width"],
-            window_compare_pool_method=input_data["window_compare_pool_method"],
+            smoothing_width=input_data["smoothingWidth"],
+            window_compare_pool_method=input_data["windowComparePoolMethod"],
             save_results=False,
         )
         clip_infos = clip_finder.find_clips(transcription)
@@ -97,9 +99,9 @@ def clip(
         return clips
 
     except Exception as e:
-        status_code = ExceptionHandler.get_status_code(e)
+        status_code = exception_handler.get_status_code(e)
         err_msg = str(e)
-        stack_trace = ExceptionHandler.get_stack_trace_info()
+        stack_trace = exception_handler.get_stack_trace_info()
 
         # define failure information
         error_info = {

@@ -15,9 +15,9 @@ from .whisperx_config_manager import WhisperXTranscriberConfigManager
 from .whisperx_transcription import WhisperXTranscription
 
 # local imports
-from ..media.audio_file import AudioFile
-from ..utils.type_checker import TypeChecker
-from ..utils.pytorch import assert_valid_torch_device
+from media.audio_file import AudioFile
+from utils.type_checker import TypeChecker
+from utils.pytorch import assert_valid_torch_device
 
 # third party imports
 import torch
@@ -176,7 +176,7 @@ class WhisperXTranscriber:
             raise NoSpeechError(err)
 
         # final destination for transcript information
-        predicted_char_info = []
+        char_info = []
 
         # remove global first character -> always a space
         try:
@@ -203,15 +203,14 @@ class WhisperXTranscriber:
                     "endTime": char_end_time,
                     "speaker": None,
                 }
-                predicted_char_info.append(new_char_dic)
+                char_info.append(new_char_dic)
 
         transcription_dict = {
             "sourceSoftware": "whisperx-v3",
             "timeSpawned": datetime.now(),
             "language": transcription["language"],
             "numSpeakers": None,
-            "charInfoPredicted": predicted_char_info,
-            "charInfoEdited": predicted_char_info,
+            "charInfo": char_info,
         }
         return WhisperXTranscription(transcription_dict)
 

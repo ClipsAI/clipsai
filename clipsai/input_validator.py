@@ -5,11 +5,11 @@ Defines an abstract class for all validating incoming inputs.
 import abc
 
 # current package imports
-from .exceptions import InvalidInputDataError
+from exceptions import InvalidInputDataError
 
 # local package imports
-from .utils.utils import find_missing_dict_keys
-from .utils.type_checker import TypeChecker
+from utils.utils import find_missing_dict_keys
+from utils.type_checker import TypeChecker
 
 
 class InputValidator:

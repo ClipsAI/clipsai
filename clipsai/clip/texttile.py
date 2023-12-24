@@ -5,14 +5,14 @@ Finding clips with AudioFiles using the TextTiling algorithm.
 import logging
 
 # current package imports
-from exceptions import TextTileClipFinderError
-from texttile_config_manager import TextTileClipFinderConfigManager
-from roberta import RobertaTextEmbedder
-from texttiler import TextTiler
+from .exceptions import TextTileClipFinderError
+from .texttile_config_manager import TextTileClipFinderConfigManager
+from .roberta import RobertaTextEmbedder
+from .texttiler import TextTiler
 
 # local package imports
-from ..transcribe.whisperx_transcription import WhisperXTranscription
-from ..utils.pytorch import get_compute_device, assert_compute_device_available
+from transcribe.whisperx_transcription import WhisperXTranscription
+from utils.pytorch import get_compute_device, assert_compute_device_available
 
 # 3rd party imports
 import torch
@@ -108,7 +108,7 @@ class TextTileClipFinder:
         """
         # get the transcription as a list of sentences
         sentences = []
-        sentences_info = transcription.get_sentence_info(False)
+        sentences_info = transcription.get_sentence_info()
         for sentence_info in sentences_info:
             sentences.append(sentence_info["sentence"])
 
@@ -118,12 +118,12 @@ class TextTileClipFinder:
 
         # add full media as clip
         clips = []
-        if transcription.get_end_time(False) <= 900:
+        if transcription.get_end_time() <= 900:
             full_media_clip = {}
             full_media_clip["startChar"] = 0
-            full_media_clip["endChar"] = len(transcription.get_char_info(False))
+            full_media_clip["endChar"] = len(transcription.get_char_info())
             full_media_clip["startTime"] = 0
-            full_media_clip["endTime"] = transcription.get_end_time(False)
+            full_media_clip["endTime"] = transcription.get_end_time()
             full_media_clip["norm"] = 1.0
             clips.append(full_media_clip)
 

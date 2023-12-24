@@ -9,7 +9,7 @@ import json
 from .file import File
 
 # local imports
-from ..utils.type_checker import TypeChecker
+from utils.type_checker import TypeChecker
 
 
 class JsonFile(File):

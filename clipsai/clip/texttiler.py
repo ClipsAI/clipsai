@@ -14,13 +14,13 @@ import logging
 import os
 
 # current package imports
-from exceptions import TextTilerError
-from config_manager import TextTilerConfigManager
+from .exceptions import TextTilerError
+from .config_manager import TextTilerConfigManager
 
 # local package imports
-from ..filesys.dir import Dir
-from ..filesys.manager import FileSystemManager
-from ..utils.pytorch import (
+from filesys.dir import Dir
+from filesys.manager import FileSystemManager
+from utils.pytorch import (
     max_magnitude_2d,
     get_compute_device,
     assert_compute_device_available,
