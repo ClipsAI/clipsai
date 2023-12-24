@@ -7,5 +7,9 @@ class ClipFinderError(Exception):
     pass
 
 
-class TextTileClipFinderError(ClipFinderError):
+class TextTilerError(ClipFinderError):
+    pass
+
+
+class TextTileClipFinderError(TextTilerError):
     pass

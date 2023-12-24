@@ -25,7 +25,7 @@ setup(
         'av',
         'opencv-python',
         'pynvml',
-        'scenedetect'
+        'scenedetect',
         'facenet-pytorch',
         'pyannote.audio',
         'pyannote.core',

@@ -5,14 +5,14 @@ Finding clips with AudioFiles using the TextTiling algorithm.
 import logging
 
 # current package imports
-from .clipfind import ClipFinder
 from .exceptions import TextTileClipFinderError
 from .texttile_config_manager import TextTileClipFinderConfigManager
+from .roberta import RobertaTextEmbedder
+from .texttiler import TextTiler
 
 # local package imports
-from ..transcribe.texttile.roberta import RobertaTextEmbedder
-from ..transcribe.texttile.texttiler import TextTiler
-from ..transcribe.whisperx_transcription import WhisperXTranscription
+from transcribe.whisperx_transcription import WhisperXTranscription
+from utils.pytorch import get_compute_device, assert_compute_device_available
 
 # 3rd party imports
 import torch
@@ -20,14 +20,14 @@ import torch
 BOUNDARY = 1
 
 
-class TextTileClipFinder(ClipFinder):
+class TextTileClipFinder:
     """
     A class for finding clips within some audio file using the TextTiling Algorithm.
     """
 
     def __init__(
         self,
-        device: str,
+        device: str = "auto",
         min_clip_duration_secs: int = 15,
         max_clip_duration_secs: int = 900,
         cutoff_policy: str = "high",
@@ -62,7 +62,6 @@ class TextTileClipFinder(ClipFinder):
         save_results: bool
             if True, saves the results of the TextTiling algorithm plots
         """
-        super().__init__(min_clip_duration_secs, max_clip_duration_secs, device)
         # configuration check
         config_manager = TextTileClipFinderConfigManager()
         config_manager.assert_valid_config(
@@ -75,6 +74,10 @@ class TextTileClipFinder(ClipFinder):
                 "window_compare_pool_method": window_compare_pool_method,
             }
         )
+        if device == "auto":
+            device = get_compute_device()
+        assert_compute_device_available(device)
+        self._device = device
         self._cutoff_policy = cutoff_policy
         self._embedding_aggregation_pool_method = embedding_aggregation_pool_method
         self._min_clip_duration_secs = min_clip_duration_secs
@@ -105,7 +108,7 @@ class TextTileClipFinder(ClipFinder):
         """
         # get the transcription as a list of sentences
         sentences = []
-        sentences_info = transcription.get_sentence_info(False)
+        sentences_info = transcription.get_sentence_info()
         for sentence_info in sentences_info:
             sentences.append(sentence_info["sentence"])
 
@@ -115,12 +118,12 @@ class TextTileClipFinder(ClipFinder):
 
         # add full media as clip
         clips = []
-        if transcription.get_end_time(False) <= 900:
+        if transcription.get_end_time() <= 900:
             full_media_clip = {}
             full_media_clip["startChar"] = 0
-            full_media_clip["endChar"] = len(transcription.get_char_info(False))
+            full_media_clip["endChar"] = len(transcription.get_char_info())
             full_media_clip["startTime"] = 0
-            full_media_clip["endTime"] = transcription.get_end_time(False)
+            full_media_clip["endTime"] = transcription.get_end_time()
             full_media_clip["norm"] = 1.0
             clips.append(full_media_clip)
 

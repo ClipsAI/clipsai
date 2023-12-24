@@ -5,8 +5,8 @@ Config manager for WhisperXTranscriber.
 from .exceptions import WhisperXTranscriberConfigError
 
 # local package imports
-from ..utils.config_manager import ConfigManager
-from ..utils.utils import find_missing_dict_keys
+from utils.config_manager import ConfigManager
+from utils.utils import find_missing_dict_keys
 
 
 class WhisperXTranscriberConfigManager(ConfigManager):

@@ -334,7 +334,7 @@ class Dir(FileSystemObject):
         # delete files that don't start with "media_file_to_transcode"
         for file in files:
             if file.get_filename().startswith("media_file_to_transcode"):
-                logging.info(
+                logging.debug(
                     "Skipping deletion of file '{}'".format(file.get_filename())
                 )
                 continue

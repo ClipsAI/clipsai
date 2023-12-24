@@ -14,14 +14,13 @@ import logging
 
 # current package imports
 from .exceptions import WhisperXTranscriptionError
-from .transcription import Transcription
 
 # local imports
-from ..filesys.json_file import JsonFile
-from ..filesys.manager import FileSystemManager
-from ..filesys.pdf_file import PdfFile
-from ..filesys.srt_file import SrtFile
-from ..utils.type_checker import TypeChecker
+from filesys.json_file import JsonFile
+from filesys.srt_file import SrtFile
+from filesys.pdf_file import PdfFile
+from filesys.manager import FileSystemManager
+from utils.type_checker import TypeChecker
 
 # 3rd party imports
 import nltk
@@ -30,7 +29,7 @@ from nltk.tokenize import sent_tokenize
 nltk.download("punkt")
 
 
-class WhisperXTranscription(Transcription):
+class WhisperXTranscription:
     """
     A class for whisperx transcription data viewing, storage, and manipulation.
     """
@@ -40,7 +39,7 @@ class WhisperXTranscription(Transcription):
         transcription: dict or JsonFile,
     ) -> None:
         """
-        Initialize WhisperXTranscription
+        Initialize WhisperXTranscription Class.
 
         Parameters
         ----------
@@ -59,15 +58,11 @@ class WhisperXTranscription(Transcription):
         self._time_spawned = None
         self._language = None
         self._num_speakers = None
-        self._char_info_predicted = None
-        self._char_info_edited = None
+        self._char_info = None
         # derived from char_info data
-        self._text_predicted = None
-        self._text_edited = None
-        self._word_info_predicted = None
-        self._word_info_edited = None
-        self._sentence_info_predicted = None
-        self._sentence_info_edited = None
+        self._text = None
+        self._word_info = None
+        self._sentence_info = None
 
         self._type_checker = TypeChecker()
         self._type_checker.assert_type(transcription, "transcription", (dict, JsonFile))
@@ -137,38 +132,31 @@ class WhisperXTranscription(Transcription):
         """
         return self._num_speakers
 
-    def get_text(self, predicted: bool) -> str:
+    def get_text(self) -> str:
         """
-        Returns the full text of either the predicted or edited transcription
+        Returns the full text of the transcription
 
         Parameters
         ----------
-        predicted: bool
-            predicted text if True, edited text if False
+        None
 
         Returns
         -------
         text: str
-            the full text of the predicted or edited transcription
+            the full text of the transcription
         """
-        if predicted is True:
-            return self._text_predicted
-        else:
-            return self._text_edited
+        return self._text
 
     def get_char_info(
         self,
-        predicted: bool,
         start_time: float = None,
         end_time: float = None,
     ) -> list:
         """
-        Returns the character info of either the predicted or edited transcription
+        Returns the character info of the transcription
 
         Parameters
         ----------
-        predicted: bool
-            predicted character info if True, edited character info if False
         start_time: float
             start time of the character info in seconds. If None, returns all character
             info
@@ -183,11 +171,7 @@ class WhisperXTranscription(Transcription):
             character in the text
         """
         self._assert_valid_times(start_time, end_time)
-
-        if predicted is True:
-            char_info = self._char_info_predicted
-        else:
-            char_info = self._char_info_edited
+        char_info = self._char_info
 
         # return all char info
         if start_time is None and end_time is None:
@@ -200,17 +184,14 @@ class WhisperXTranscription(Transcription):
 
     def get_word_info(
         self,
-        predicted: bool,
         start_time: float = None,
         end_time: float = None,
     ) -> list:
         """
-        Returns the word info of either the predicted or edited text
+        Returns the word info of the text
 
         Parameters
         ----------
-        predicted: bool
-            predicted word info if True, edited word info if False
         start_time: float
             start time of the word info in seconds. If None, returns all word info
         end_time: float
@@ -225,10 +206,7 @@ class WhisperXTranscription(Transcription):
         self._assert_valid_times(start_time, end_time)
 
         # get all word info
-        if predicted is True:
-            word_info = self._word_info_predicted
-        else:
-            word_info = self._word_info_edited
+        word_info = self._word_info
 
         # return all word info
         if start_time is None and end_time is None:
@@ -241,17 +219,14 @@ class WhisperXTranscription(Transcription):
 
     def get_sentence_info(
         self,
-        predicted: bool,
         start_time: float = None,
         end_time: float = None,
     ) -> list:
         """
-        Returns the sentence information of either the predicted or edited text
+        Returns the sentence information of the text.
 
         Parameters
         ----------
-        predicted: bool
-            predicted sentence info if True, edited sentence info if False
         start_time: float
             start time of the sentence info in seconds. If None, returns all word info
         end_time: float
@@ -264,11 +239,7 @@ class WhisperXTranscription(Transcription):
             sentence in the text
         """
         self._assert_valid_times(start_time, end_time)
-
-        if predicted is True:
-            sentence_info = self._sentence_info_predicted
-        else:
-            sentence_info = self._sentence_info_edited
+        sentence_info = self._sentence_info
 
         # return all word info
         if start_time is None and end_time is None:
@@ -279,14 +250,12 @@ class WhisperXTranscription(Transcription):
             end_index = self.find_sentence_index(end_time, type_of_time="end")
             return sentence_info[start_index : end_index + 1]
 
-    def get_sentences(self, predicted: bool) -> list:
+    def get_sentences(self) -> list:
         """
-        Returns the sentences of either the predicted or edited text.
+        Returns the sentences of the text.
 
         Parameters
         ----------
-        predicted: bool
-            predicted sentences if True, edited sentences if False
 
         Returns
         -------
@@ -294,18 +263,16 @@ class WhisperXTranscription(Transcription):
             list of sentences
         """
         sentences = []
-        for sentence_info in self.get_sentence_info(predicted):
+        for sentence_info in self.get_sentence_info():
             sentences.append(sentence_info["sentence"])
         return sentences
 
-    def get_start_time(self, predicted: bool) -> float:
+    def get_start_time(self) -> float:
         """
         Returns the start time of the transcript in seconds.
 
         Parameters
         ----------
-        predicted: bool
-            predicted start time if True, edited start time if False
 
         Returns
         -------
@@ -314,21 +281,20 @@ class WhisperXTranscription(Transcription):
         """
         return 0.0
 
-    def get_end_time(self, predicted: bool) -> float:
+    def get_end_time(self) -> float:
         """
         Returns the end time of the transcript in seconds.
 
         Parameters
         ----------
-        predicted: bool
-            predicted end time if True, edited end time if False
+        None
 
         Returns
         -------
         float
             the end time of the transcript in seconds
         """
-        char_info = self.get_char_info(predicted)
+        char_info = self.get_char_info()
         for i in range(len(char_info) - 1, -1, -1):
             if char_info[i]["endTime"] is not None:
                 return char_info[i]["endTime"]
@@ -357,20 +323,9 @@ class WhisperXTranscription(Transcription):
         json_file.delete()
 
         # only store necessary data
-        char_info_predicted_needed_for_storage = []
-        for char_info in self._char_info_predicted:
-            char_info_predicted_needed_for_storage.append(
-                {
-                    "char": char_info["char"],
-                    "startTime": char_info["startTime"],
-                    "endTime": char_info["endTime"],
-                    "speaker": char_info["speaker"],
-                }
-            )
-
-        char_info_edited_needed_for_storage = []
-        for char_info in self._char_info_edited:
-            char_info_edited_needed_for_storage.append(
+        char_info_needed_for_storage = []
+        for char_info in self._char_info:
+            char_info_needed_for_storage.append(
                 {
                     "char": char_info["char"],
                     "startTime": char_info["startTime"],
@@ -384,8 +339,7 @@ class WhisperXTranscription(Transcription):
             "timeSpawned": str(self._time_spawned),
             "language": self._language,
             "numSpeakers": self._num_speakers,
-            "charInfoPredicted": char_info_predicted_needed_for_storage,
-            "charInfoEdited": char_info_edited_needed_for_storage,
+            "charInfo": char_info_needed_for_storage,
         }
 
         json_file.create(transcription_dict)
@@ -413,7 +367,7 @@ class WhisperXTranscription(Transcription):
             The index of char_info that is closest to 'target_time'
         """
         return self._find_index(
-            self.get_char_info(predicted=False), target_time, type_of_time
+            self.get_char_info(), target_time, type_of_time
         )
 
     def find_word_index(self, target_time: float, type_of_time: str) -> int:
@@ -438,7 +392,7 @@ class WhisperXTranscription(Transcription):
             The index of word_info that is closest to 'target_time'.
         """
         return self._find_index(
-            self.get_word_info(predicted=False), target_time, type_of_time
+            self.get_word_info(), target_time, type_of_time
         )
 
     def find_sentence_index(self, target_time: float, type_of_time: str) -> int:
@@ -463,7 +417,7 @@ class WhisperXTranscription(Transcription):
             The index of word_info that is closest to 'target_time'
         """
         return self._find_index(
-            self.get_sentence_info(predicted=False), target_time, type_of_time
+            self.get_sentence_info(), target_time, type_of_time
         )
 
     def _find_index(
@@ -492,8 +446,8 @@ class WhisperXTranscription(Transcription):
         int
             The index that is closest to 'target_time'
         """
-        transcript_start = self.get_start_time(False)
-        transcript_end = self.get_end_time(False)
+        transcript_start = self.get_start_time()
+        transcript_end = self.get_end_time()
         if (transcript_start <= target_time <= transcript_end) is False:
             err = (
                 "target_time '{}' seconds is not within the range of the transcript "
@@ -529,7 +483,7 @@ class WhisperXTranscription(Transcription):
         end_time: float = None,
     ) -> SrtFile:
         """
-        Stores the transcription as a srt file. Overwrites 'dest_file_path' if already
+        Stores the transcription as a srt file. Overwrites 'file_path' if already
         exists.
 
         Parameters
@@ -555,13 +509,13 @@ class WhisperXTranscription(Transcription):
         srt_file.delete()
 
         # build subtitles
-        word_info = self.get_word_info(False, start_time, end_time)
+        word_info = self.get_word_info(start_time, end_time)
         subtitles = self._build_subtitles(word_info, max_subtitle_length=32)
 
         # create srt file
         srt_file.create(subtitles)
         srt_file.assert_exists()
-        logging.info("srt file created at {}".format(srt_file.get_path()))
+        logging.debug("srt file created at {}".format(srt_file.get_path()))
         return srt_file
 
     def store_as_pdf_file(
@@ -571,7 +525,7 @@ class WhisperXTranscription(Transcription):
         end_time: float = None,
     ) -> PdfFile:
         """
-        Stores the transcription as a pdf file. Overwrites 'dest_file_path' if already
+        Stores the transcription as a pdf file. Overwrites 'file_path' if already
         exists.
 
         Parameters
@@ -585,7 +539,8 @@ class WhisperXTranscription(Transcription):
 
         Returns
         -------
-        None
+        PdfFile
+            the pdf file containing the transcript
         """
         pdf_file = PdfFile(file_path)
         pdf_file.assert_has_file_extension("pdf")
@@ -595,7 +550,7 @@ class WhisperXTranscription(Transcription):
         pdf_file.delete()
 
         # build paragraphs
-        sentence_info = self.get_sentence_info(False, start_time, end_time)
+        sentence_info = self.get_sentence_info(start_time, end_time)
         sentences = [sent["sentence"] for sent in sentence_info]
         num_sentences_per_paragraph = 5
         paragraphs = []
@@ -606,26 +561,22 @@ class WhisperXTranscription(Transcription):
         pdf_file.assert_exists()
         return pdf_file
 
-    def print_char_info(self, predicted: bool) -> None:
+    def print_char_info(self) -> None:
         """
         Pretty prints the character info for easy viewing
 
         Parameters
         ----------
-        predicted: bool
-            prints predicted character info if True, edited character info if False
+        None
 
         Returns
         -------
         None
         """
-        if predicted is True:
-            title = "charInfoPredicted"
-        else:
-            title = "charInfoEdited"
+        title = "charInfo"
         print(title)
         print("-" * len(title))
-        for i, char_info in enumerate(self.get_char_info(predicted)):
+        for i, char_info in enumerate(self.get_char_info()):
             print("char: {}".format(char_info["char"]))
             print("startTime: {}".format(char_info["startTime"]), end=" | ")
             print("endTime: {}".format(char_info["endTime"]))
@@ -633,23 +584,22 @@ class WhisperXTranscription(Transcription):
             print("wordIndex: {}".format(char_info["wordIdx"]), end=" | ")
             print("sentenceIndex: {}\n".format(char_info["sentenceIdx"]))
 
-    def print_word_info(self, predicted: bool) -> None:
+    def print_word_info(self) -> None:
         """
         Pretty prints the word info for easy viewing
 
         Parameters
         ----------
-        predicted: bool
-            prints predicted word info if True, edited word info if False
+        None
 
         Returns
         -------
         None
         """
-        title = "wordInfoPredicted" if predicted is True else "wordInfoEdited"
+        title = "wordInfo"
         print(title)
         print("-" * len(title))
-        for i, word_info in enumerate(self.get_word_info(predicted)):
+        for i, word_info in enumerate(self.get_word_info()):
             print("word: '{}'".format(word_info["word"]), end=" | ")
             print("wordIndex: {}".format(i))
             print("speaker: {}".format(word_info["speaker"]))
@@ -658,23 +608,22 @@ class WhisperXTranscription(Transcription):
             print("startChar: {}".format(word_info["startChar"]), end=" | ")
             print("endChar: {}\n".format(word_info["endChar"]))
 
-    def print_sentence_info(self, predicted: bool) -> None:
+    def print_sentence_info(self) -> None:
         """
         Pretty prints the sentence info for easy viewing
 
         Parameters
         ----------
-        predicted: bool
-            prints predicted sentence info if True, edited sentence info if False
+        None
 
         Returns
         -------
         None
         """
-        title = "sentenceInfoPredicted" if predicted is True else "sentenceInfoEdited"
+        title = "sentenceInfo"
         print(title)
         print("-" * len(title))
-        for i, sentence_info in enumerate(self.get_sentence_info(predicted)):
+        for i, sentence_info in enumerate(self.get_sentence_info()):
             print("sentence: '{}'".format(sentence_info["sentence"]))
             print("sentenceIndex: {}".format(i))
             print("startChar: {}".format(sentence_info["startChar"]), end=" | ")
@@ -730,15 +679,11 @@ class WhisperXTranscription(Transcription):
         self._source_software = transcription["sourceSoftware"]
         self._language = transcription["language"]
         self._num_speakers = transcription["numSpeakers"]
-        self._char_info_predicted = transcription["charInfoPredicted"]
-        self._char_info_edited = transcription["charInfoEdited"]
+        self._char_info = transcription["charInfo"]
         # derived data
-        self._build_text(predicted=True)
-        self._build_text(predicted=False)
-        self._build_word_info(predicted=True)
-        self._build_word_info(predicted=False)
-        self._build_sentence_info(predicted=True)
-        self._build_sentence_info(predicted=False)
+        self._build_text()
+        self._build_word_info()
+        self._build_sentence_info()
 
     def _assert_valid_transcription_data(self, transcription: dict) -> None:
         """
@@ -760,45 +705,36 @@ class WhisperXTranscription(Transcription):
             "timeSpawned": (datetime, str),
             "language": (str),
             "numSpeakers": (int, type(None)),
-            "charInfoPredicted": (list),
-            "charInfoEdited": (list),
+            "charInfo": (list),
         }
         self._type_checker.assert_dict_elems_type(
             transcription, transcription_keys_correct_data_types
         )
 
-        # ensure charInfoPredicted and charInfoEdited contain dictionaries
-        for char_info in transcription["charInfoPredicted"]:
-            self._type_checker.assert_type(char_info, "char_info", dict)
-        for char_info in transcription["charInfoEdited"]:
+        # ensure charInfo contains dictionaries
+        for char_info in transcription["charInfo"]:
             self._type_checker.assert_type(char_info, "char_info", dict)
 
-        # ensure charInfoPredicted and charInfoEdited have valid keys and datatypes
+        # ensure charInfo has valid keys and datatypes
         char_dict_keys_correct_data_types = {
             "char": (str),
             "startTime": (float, type(None)),
             "endTime": (float, type(None)),
             "speaker": (int, type(None)),
         }
-        for char_dict in transcription["charInfoPredicted"]:
-            self._type_checker.are_dict_elems_of_type(
-                char_dict,
-                char_dict_keys_correct_data_types,
-            )
-        for char_dict in transcription["charInfoEdited"]:
+        for char_dict in transcription["charInfo"]:
             self._type_checker.are_dict_elems_of_type(
                 char_dict,
                 char_dict_keys_correct_data_types,
             )
 
-    def _build_text(self, predicted: bool) -> str:
+    def _build_text(self) -> str:
         """
         Builds the text from the char_info
 
         Parameters
         ----------
-        predicted: bool
-            whether to build the predicted text or edited text
+        None
 
         Returns
         -------
@@ -806,29 +742,25 @@ class WhisperXTranscription(Transcription):
             the full text built from the char_info
         """
         text = ""
-        for char_info in self.get_char_info(predicted):
+        for char_info in self.get_char_info():
             text += char_info["char"]
 
-        if predicted is True:
-            self._text_predicted = text
-        else:  # predicted == False:
-            self._text_edited = text
+        self._text = text
 
-    def _build_word_info(self, predicted: bool) -> list[dict]:
+    def _build_word_info(self) -> list[dict]:
         """
         Builds the word_info from the char_info
 
         Parameters
         ----------
-        predicted: bool
-            whether to build the predicted text or edited text
+        None
 
         Returns
         -------
         list[dict]:
             the word_info built from the char_info
         """
-        char_info = self.get_char_info(predicted)
+        char_info = self.get_char_info()
 
         # final destination for word_info
         word_info = []
@@ -904,13 +836,8 @@ class WhisperXTranscription(Transcription):
             "speaker": None,
         }
         word_info.append(new_word_info)
-
-        if predicted is True:
-            self._char_info_predicted = char_info
-            self._word_info_predicted = word_info
-        else:  # predicted == False:
-            self._char_info_edited = char_info
-            self._word_info_edited = word_info
+        self._char_info = char_info
+        self._word_info = word_info
 
     def _is_space(self, char: str) -> bool:
         """
@@ -968,21 +895,20 @@ class WhisperXTranscription(Transcription):
         is_word_end = is_word_end and (self._is_space(next_char) is True)
         return is_word_end
 
-    def _build_sentence_info(self, predicted: bool) -> None:
+    def _build_sentence_info(self) -> None:
         """
         Builds the sentence_info from the char_info
 
         Parameters
         ----------
-        predicted: bool
-            whether to build the predicted or edited sentence_info
+        None
 
         Returns
         -------
         None
         """
-        char_info = self.get_char_info(predicted)
-        sentences = sent_tokenize(self.get_text(predicted))
+        char_info = self.get_char_info()
+        sentences = sent_tokenize(self.get_text())
 
         # final destination for sentence_info
         sentence_info = []
@@ -1037,12 +963,8 @@ class WhisperXTranscription(Transcription):
             }
             sentence_info.append(new_sentence_info)
 
-        if predicted is True:
-            self._char_info_predicted = char_info
-            self._sentence_info_predicted = sentence_info
-        else:  # predicted == False:
-            self._char_info_edited = char_info
-            self._sentence_info_edited = sentence_info
+        self._char_info = char_info
+        self._sentence_info = sentence_info
 
         return sentence_info
 
@@ -1072,7 +994,7 @@ class WhisperXTranscription(Transcription):
         correct_char_idx: int or None
             the char_idx scuh that char_info[char_idx] == correct_char
         """
-        logging.info(
+        logging.debug(
             "Realigning char_idx '{}' with the correct starting character "
             "'{}' for the sentence.".format(char_idx, correct_char)
         )
@@ -1214,11 +1136,11 @@ class WhisperXTranscription(Transcription):
             raise WhisperXTranscriptionError(err)
 
         # end time can't exceed transcription end time
-        if end_time > self.get_end_time(predicted=False):
+        if end_time > self.get_end_time():
             err = (
                 "end_time ({} seconds) must be less than or equal to the transcript's "
                 "end time ({} seconds)".format(
-                    end_time, self.get_end_sec(predicted=False)
+                    end_time, self.get_end_time()
                 )
             )
             logging.error(err)
@@ -1233,7 +1155,7 @@ class WhisperXTranscription(Transcription):
             logging.error(err)
             raise WhisperXTranscriptionError(err)
 
-    def __str__(self) -> None:
+    def __str__(self) -> str:
         """
         Tells Python interpreter how to print the object
 
@@ -1246,7 +1168,28 @@ class WhisperXTranscription(Transcription):
         None
         """
         transcription = (
-            "sourceSoftware: {}\ntimeSpawned: {}\nlanguage: {}\nnumSpeakers: {}\n"
+            "{}\n"
+            "".format(
+                self.get_text()
+            )
+        )
+        return transcription
+
+    def get_info(self) -> str:
+        """
+        Returns a string containing the transcription information
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        str
+            string containing the transcription information
+        """
+        info = (
+            "sourceSoftware: {}\ntimeCreated: {}\nlanguage: {}\nnumSpeakers: {}\n"
             "".format(
                 self.get_source_software(),
                 self.get_time_spawned(),
@@ -1254,4 +1197,4 @@ class WhisperXTranscription(Transcription):
                 self.get_num_speakers(),
             )
         )
-        return transcription
+        return info

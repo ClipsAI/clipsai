@@ -56,7 +56,7 @@ class PyannoteDiarizer:
             "pyannote/speaker-diarization-3.0",
             use_auth_token=auth_token,
         ).to(torch.device(device))
-        logging.info("Pyannote using device: {}".format(self.pipeline.device))
+        logging.debug("Pyannote using device: {}".format(self.pipeline.device))
 
     def diarize(self, audio_file: AudioFile) -> list[dict]:
         """
