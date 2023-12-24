@@ -23,12 +23,16 @@ setup(
         'sentence-transformers',
         'matplotlib',
         'av',
-        'cv2',
+        'opencv-python',
         'pynvml',
         'scenedetect'
         'facenet-pytorch',
         'pyannote.audio',
         'pyannote.core',
+        'onnxruntime',
+        'pytest',
+        'pytest-cov',
+        'pytest-mock',
     ],
     zip_safe=False
 )

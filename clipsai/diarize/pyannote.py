@@ -17,6 +17,9 @@ use that as the number of speakers to detect.
 # standard library imports
 import logging
 
+# current package imports
+from .segment import SpeakerSegment
+
 # local package imports
 from media.audio_file import AudioFile
 from utils.pytorch import get_compute_device, assert_compute_device_available

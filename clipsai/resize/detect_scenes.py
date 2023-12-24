@@ -19,6 +19,8 @@ def detect_scenes(
     ----------
     video_file: VideoFile
         The video file to detect scene changes in.
+    min_scene_secs: float
+        The minimum length of a scene in seconds.
 
     Returns
     -------

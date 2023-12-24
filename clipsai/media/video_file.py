@@ -167,7 +167,7 @@ class VideoFile(TemporalMediaFile):
         overwrite: bool = True,
     ) -> ImageFile or None:
         """
-        Extracts a frame at 'extract_sec' to 'dest_image'.
+        Extracts a frame at 'extract_sec' to 'dest_image_file_path'.
 
         - The image type is inferred from the file extension of dest_image
 
