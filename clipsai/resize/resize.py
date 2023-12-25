@@ -17,7 +17,7 @@ def resize(
     video_file_path: str,
     pyannote_auth_token: str,
     aspect_ratio: tuple[int, int] = (9, 16),
-    device: str = None,
+    device: str = "auto",
 ) -> list[dict]:
     """
     Resizes a video to a desired aspect ratio, default aspect ration: 9:16.

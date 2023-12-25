@@ -35,7 +35,7 @@ class PyannoteDiarizer:
     A class for diarizing audio files using pyannote.
     """
 
-    def __init__(self, auth_token: str, device: str = None) -> None:
+    def __init__(self, auth_token: str, device: str = "auto") -> None:
         """
         Initialize PyannoteDiarizer
 
@@ -48,7 +48,7 @@ class PyannoteDiarizer:
         -------
         None
         """
-        if device is None:
+        if device == "auto":
             device = get_compute_device()
         assert_compute_device_available(device)
 

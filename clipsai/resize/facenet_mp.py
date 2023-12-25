@@ -36,11 +36,11 @@ class FaceNetMediaPipeResizer:
     FACE_DETECT_WIDTH = 960
     SAMPLES_PER_SEGMENT = 13
 
-    def __init__(self, device: str = None) -> None:
+    def __init__(self, device: str = "auto") -> None:
         """
         Initialize the DLibResizer class
         """
-        if device is None:
+        if device == "auto":
             device = pytorch.get_compute_device()
         pytorch.assert_compute_device_available(device)
         logging.info("FaceNet using device: {}".format(device))
