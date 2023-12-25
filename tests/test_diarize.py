@@ -167,7 +167,6 @@ def test_adjust_segments_discards_short_segments(mock_diarizer, mock_annotation,
     assert segments[2]['startTime'] == 21
     assert segments[2]['endTime'] == mock_audio_file.get_duration()
 
-
 def test_adjust_segments_merges_contiguous_segments_with_same_speakers(mock_diarizer, mock_annotation, mock_audio_file):
     mock_annotation[Segment(10, 12)] = 'speaker_1'
 
