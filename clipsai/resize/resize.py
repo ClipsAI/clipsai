@@ -51,7 +51,7 @@ def resize(
     scene_changes = detect_scenes(media)
 
     logging.debug("RESIZING VIDEO) ({})".format(media.get_filename()))
-    resizer = FaceNetMediaPipeResizer(device)
+    resizer = FaceNetMediaPipeResizer(device=device)
     crops = resizer.resize(
         video_file=media,
         speaker_segments=diarized_segments,
@@ -61,5 +61,4 @@ def resize(
     resizer.cleanup()
 
     return crops
-    
     

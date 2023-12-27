@@ -11,13 +11,13 @@ import logging
 # current package imports
 from .exceptions import FaceNetMediaPipeResizerError
 from .rect import Rect
-from utils import pytorch
 from .image import extract_frames, calc_img_bytes
 
 # local package imports
 from media.editor import MediaEditor
 from media.video_file import VideoFile
 from utils.conversions import bytes_to_gibibytes
+from utils import pytorch
 
 # 3rd party imports
 import cv2
@@ -33,19 +33,26 @@ class FaceNetMediaPipeResizer:
     A class for calculating the initial coordinates for resizing by using
     segmentation and face detection.
     """
-    FACE_DETECT_WIDTH = 960
-    SAMPLES_PER_SEGMENT = 13
 
-    def __init__(self, device: str = "auto") -> None:
+    def __init__(
+            self,
+            face_detect_margin: int = 20,
+            face_detect_post_process: bool = False,
+            device: str = "auto"
+    ) -> None:
         """
-        Initialize the DLibResizer class
+        Initialize the FaceNet and MediaPipe classes
         """
         if device == "auto":
             device = pytorch.get_compute_device()
         pytorch.assert_compute_device_available(device)
-        logging.info("FaceNet using device: {}".format(device))
+        logging.debug("FaceNet using device: {}".format(device))
 
-        self._face_detector = MTCNN(margin=20, post_process=False, device=device)
+        self._face_detector = MTCNN(
+            margin=face_detect_margin, 
+            post_process=face_detect_post_process, 
+            device=device
+        )
         # media pipe automatically uses gpu if available
         self._face_mesher = mp.solutions.face_mesh.FaceMesh()
         self._media_editor = MediaEditor()
@@ -56,27 +63,36 @@ class FaceNetMediaPipeResizer:
         speaker_segments: list[dict],
         scene_changes: list[float],
         aspect_ratio: tuple = (9, 16),
+        samples_per_segment: int = 13,
+        face_detect_width: int = 960,
+        n_face_detect_batches: int = 8,
+        scene_merge_threshold: float = 0.25,
     ) -> list[dict]:
         """
-        Calculates the coordinates to resize the video to for different segments given
-        the diarized speaker segments and the desired aspect ratio.
+        Calculates the coordinates to resize the video to for different
+        segments given the diarized speaker segments and the desired aspect
+        ratio.
 
         Parameters
         ----------
         video_file: VideoFile
             the video file to resize
         speaker_segments: list[dict]
-            List of speaker segments (dictionaries), each with the following keys
+            List of speaker segments (dicts), each with the following keys
                 speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
+                    list of speakers (represented by int) talking in the segment
                 startTime: float
                     start time of the segment in seconds
                 endTime: float
                     end time of the segment in seconds
         scene_changes: list[float]
-            List of scene change times in seconds.
+            List of scene change times in seconds
         aspect_ratio: tuple[int, int]
             the width:height aspect ratio to resize the video to
+        n_face_detect_batches: int
+            number of batches for GPU face detection in a video file
+        scene_merge_threshold: float
+            the threshold (in seconds) for merging scene changes with speaker segments
 
         Returns
         -------
@@ -103,7 +119,7 @@ class FaceNetMediaPipeResizer:
                         y: int
                             y-coordinate of the top left corner of the resized segment
         """
-        logging.info("Video Resolution: {}x{}".format(
+        logging.debug("Video Resolution: {}x{}".format(
             video_file.get_width_pixels(), video_file.get_height_pixels()
         ))
         # calculate resize dimensions
@@ -115,34 +131,39 @@ class FaceNetMediaPipeResizer:
             )
         )
 
-        logging.info("Merging {} speaker segments with {} scene changes.".format(
+        logging.debug("Merging {} speaker segments with {} scene changes.".format(
             len(speaker_segments), len(scene_changes)
         ))
         segments = self._merge_scene_change_and_speaker_segments(
-            speaker_segments=speaker_segments,
-            scene_changes=scene_changes,
+            speaker_segments, scene_changes, scene_merge_threshold
         )
-        logging.info("Video has {} distinct segments.".format(len(segments)))
+        logging.debug("Video has {} distinct segments.".format(len(segments)))
 
-        logging.info("Determining the first second with a face for each segment.")
+        logging.debug("Determining the first second with a face for each segment.")
         segments = self._find_first_sec_with_face_for_each_segment(
-            segments, video_file
+            segments,
+            video_file,
+            face_detect_width,
+            n_face_detect_batches
         )
 
-        logging.info("Determining the region of interest for {} segments.".format(
+        logging.debug("Determining the region of interest for {} segments.".format(
             len(segments)
         ))
         segments = self._add_x_y_coords_to_each_segment(
-            segments=segments,
-            video_file=video_file,
-            resize_width=resize_width,
-            resize_height=resize_height,
+            segments, 
+            video_file, 
+            resize_width, 
+            resize_height,
+            samples_per_segment,
+            face_detect_width,
+            n_face_detect_batches
         )
 
-        logging.info("Merging identical segments together.")
+        logging.debug("Merging identical segments together.")
         unmerge_segments_length = len(segments)
         segments = self._merge_identical_segments(segments, video_file)
-        logging.info("Merged {} identical segments.".format(
+        logging.debug("Merged {} identical segments.".format(
             unmerge_segments_length - len(segments)
         ))
 
@@ -160,7 +181,7 @@ class FaceNetMediaPipeResizer:
         self,
         original_width_pixels: int,
         original_height_pixels: int,
-        resize_aspect_ratio: tuple,
+        resize_aspect_ratio: tuple[int, int],
     ) -> tuple[int, int]:
         """
         Calculate the number of pixels along the width and height to resize the video
@@ -203,6 +224,7 @@ class FaceNetMediaPipeResizer:
         self,
         speaker_segments: list[dict],
         scene_changes: list[float],
+        scene_merge_threshold: float,
     ) -> list[dict]:
         """
         Merge scene change segments with speaker segments.
@@ -238,7 +260,7 @@ class FaceNetMediaPipeResizer:
                 segments_idx += 1
                 segment = speaker_segments[segments_idx]
             # scene change is close to speaker segment end -> merge the two
-            if 0 < (segment["endTime"] - scene_change_sec) < 0.25:
+            if 0 < (segment["endTime"] - scene_change_sec) < scene_merge_threshold:
                 segment["endTime"] = scene_change_sec
                 if segments_idx == len(speaker_segments) - 1:
                     continue
@@ -246,7 +268,7 @@ class FaceNetMediaPipeResizer:
                 next_segment["startTime"] = scene_change_sec
                 continue
             # scene change is close to speaker segment start -> merge the two
-            if 0 < (scene_change_sec - segment["startTime"]) < 0.25:
+            if 0 < (scene_change_sec - segment["startTime"]) < scene_merge_threshold:
                 segment["startTime"] = scene_change_sec
                 if segments_idx == 0:
                     continue
@@ -275,7 +297,9 @@ class FaceNetMediaPipeResizer:
         self,
         segments: list[dict],
         video_file: VideoFile,
-    ) -> tuple:
+        face_detect_width: int,
+        n_face_detect_batches: int,
+    ) -> list[dict]:
         """
         Find the first frame in a segment with a face.
 
@@ -291,6 +315,8 @@ class FaceNetMediaPipeResizer:
                     end time of the segment in seconds
         video_file: VideoFile
             The video file to analyze.
+        n_face_detect_batches: int
+            The number of batches to use for identifyinng faces from a video file
 
         Returns
         -------
@@ -332,7 +358,12 @@ class FaceNetMediaPipeResizer:
                     detect_secs.append(segment["firstFaceSec"] + i * sample_period)
 
             # detect faces
-            n_batches = self._calc_n_batches(video_file, len(detect_secs))
+            n_batches = self._calc_n_batches(
+                video_file=video_file,
+                num_frames=len(detect_secs),
+                face_detect_width=face_detect_width,
+                n_face_detect_batches=n_face_detect_batches
+            )
             frames_per_batch = int(len(detect_secs) // n_batches + 1)
             face_detections = []
             for i in range(n_batches):
@@ -343,7 +374,7 @@ class FaceNetMediaPipeResizer:
                         min((i + 1) * frames_per_batch, len(detect_secs))
                     ]
                 )
-                face_detections += self._detect_faces(frames)
+                face_detections += self._detect_faces(frames, face_detect_width)
 
             # check if any faces were found for each segment
             idx = 0
@@ -383,6 +414,8 @@ class FaceNetMediaPipeResizer:
         self,
         video_file: VideoFile,
         num_frames: int,
+        face_detect_width: int,
+        n_face_detect_batches: int,
     ) -> int:
         """
         Calculate the number of batches to use for extracting frames from a video file
@@ -394,6 +427,8 @@ class FaceNetMediaPipeResizer:
             The video file to analyze.
         num_frames: int
             The number of frames to analyze.
+        n_face_detect_batches: int
+            Number of batches for GPU face detection in a video file.
 
         Returns
         -------
@@ -403,35 +438,36 @@ class FaceNetMediaPipeResizer:
         # calculate memory needed to extract frames to CPU
         vid_height = video_file.get_height_pixels()
         vid_width = video_file.get_width_pixels()
-        bytes_per_frame = calc_img_bytes(vid_height, vid_width, 3)
+        num_color_channels = 3
+        bytes_per_frame = calc_img_bytes(vid_height, vid_width, num_color_channels)
         total_extract_bytes = num_frames * bytes_per_frame
-        logging.info("Need {:.3f} GiB to extract (at most) {} frames.".format(
+        logging.debug("Need {:.3f} GiB to extract (at most) {} frames".format(
             bytes_to_gibibytes(total_extract_bytes), num_frames
         ))
 
         # calculate memory needed to detect faces -> could be CPU or GPU
-        downsample_factor = max(vid_width / self.FACE_DETECT_WIDTH, 1)
-        face_detect_height = int(video_file.get_height_pixels() // downsample_factor)
-        logging.info("Face detection dimensions: {}x{}".format(
-            face_detect_height, self.FACE_DETECT_WIDTH
+        downsample_factor = max(vid_width / face_detect_width, 1)
+        face_detect_height = int(vid_height // downsample_factor)
+        logging.debug("Face detection dimensions: {}x{}".format(
+            face_detect_height, face_detect_width
         ))
-        bytes_per_frame = calc_img_bytes(face_detect_height, self.FACE_DETECT_WIDTH, 3)
+        bytes_per_frame = calc_img_bytes(
+            face_detect_height, 
+            face_detect_width,
+            num_color_channels
+        )
         total_face_detect_bytes = num_frames * bytes_per_frame
-        logging.info("Need {:.3f} GiB to detect faces from (at most) {} frames.".format(
+        logging.debug("Need {:.3f} GiB to detect faces from (at most) {} frames".format(
             bytes_to_gibibytes(total_face_detect_bytes), num_frames
         ))
 
-        # calculate number of batches to add x and y coordinates
-        # Tested for a single NVIDIA T4 GPU w/ 16GiB of memory
-        free_gpu_memory = 800000000  # ~750 MiB
-        # Tested for Google's C3D servers with ~7.5 cores and 27GiB of memory
-        free_cpu_memory = 8000000000  # ~7.5 GiB
+        # calculate number of batches to use
+        free_cpu_memory = pytorch.get_free_cpu_memory()
         if torch.cuda.is_available():
-            n_extract_batches = int(total_extract_bytes // free_cpu_memory + 1)
-            n_face_detect_batches = total_face_detect_bytes // free_gpu_memory + 1
+            n_extract_batches = int((total_extract_bytes // free_cpu_memory) + 1)
         else:
             total_extract_bytes += total_face_detect_bytes
-            n_extract_batches = total_extract_bytes // free_cpu_memory + 1
+            n_extract_batches = int((total_extract_bytes // free_cpu_memory) + 1)
             n_face_detect_batches = 0
 
         n_batches = int(max(n_extract_batches, n_face_detect_batches))
@@ -442,7 +478,7 @@ class FaceNetMediaPipeResizer:
             gpu_mem_per_batch = bytes_to_gibibytes(
                 total_face_detect_bytes // n_batches
             )
-        logging.info(
+        logging.debug(
             "Using {} batches to extract and detect frames. Need {:.3f} GiB of CPU "
             "memory per batch and {:.3f} GiB of GPU memory per batch".format(
                 n_batches, cpu_mem_per_batch, gpu_mem_per_batch,
@@ -453,6 +489,7 @@ class FaceNetMediaPipeResizer:
     def _detect_faces(
         self,
         frames: list[np.ndarray],
+        face_detect_width: int,
     ) -> list[np.ndarray]:
         """
         Detect faces in a list of frames.
@@ -470,16 +507,16 @@ class FaceNetMediaPipeResizer:
             The face detections for each frame.
         """
         if len(frames) == 0:
-            logging.info("No frames to detect faces in.")
+            logging.debug("No frames to detect faces in.")
             return []
 
         # resize the frames
-        logging.info("Detecting faces in {} frames.".format(len(frames)))
-        downsample_factor = max(frames[0].shape[1] / self.FACE_DETECT_WIDTH, 1)
+        logging.debug("Detecting faces in {} frames.".format(len(frames)))
+        downsample_factor = max(frames[0].shape[1] / face_detect_width, 1)
         detect_height = int(frames[0].shape[0] / downsample_factor)
         resized_frames = []
         for frame in frames:
-            resized_frame = cv2.resize(frame, (self.FACE_DETECT_WIDTH, detect_height))
+            resized_frame = cv2.resize(frame, (face_detect_width, detect_height))
             if torch.cuda.is_available():
                 resized_frame = torch.from_numpy(resized_frame).to(
                     device="cuda", dtype=torch.uint8
@@ -499,7 +536,7 @@ class FaceNetMediaPipeResizer:
                 detection = (detection * downsample_factor).astype(np.int16)
             face_detections.append(detection)
 
-        logging.info("Detected faces in {} frames.".format(len(face_detections)))
+        logging.debug("Detected faces in {} frames.".format(len(face_detections)))
         return face_detections
 
     def _add_x_y_coords_to_each_segment(
@@ -508,6 +545,9 @@ class FaceNetMediaPipeResizer:
         video_file: VideoFile,
         resize_width: int,
         resize_height: int,
+        samples_per_segment: int,
+        face_detect_width: int,
+        n_face_detect_batches: int,
     ) -> list[dict]:
         """
         Add the x and y coordinates to resize each segment to.
@@ -549,24 +589,31 @@ class FaceNetMediaPipeResizer:
                     y-coordinate of the top left corner of the resized segment
         """
         num_segments = len(segments)
-        num_frames = num_segments * self.SAMPLES_PER_SEGMENT
-        n_batches = self._calc_n_batches(video_file, num_frames)
+        num_frames = num_segments * samples_per_segment
+        n_batches = self._calc_n_batches(
+            video_file,
+            num_frames,
+            face_detect_width,
+            n_face_detect_batches
+        )
         segments_per_batch = int(num_segments // n_batches + 1)
         segments_with_xy_coords = []
         for i in range(n_batches):
-            logging.info("Analyzing batch {} of {}.".format(i, n_batches))
+            logging.debug("Analyzing batch {} of {}.".format(i, n_batches))
             cur_segments = segments[
                 i * segments_per_batch:
                 min((i + 1) * segments_per_batch, len(segments))
             ]
             if len(cur_segments) == 0:
-                logging.info("No segments left to analyze. (Batch {})".format(i))
+                logging.debug("No segments left to analyze. (Batch {})".format(i))
                 break
             segments_with_xy_coords += self._add_x_y_coords_to_each_segment_batch(
                 segments=cur_segments,
                 video_file=video_file,
                 resize_width=resize_width,
                 resize_height=resize_height,
+                samples_per_segment=samples_per_segment,
+                face_detect_width=face_detect_width,
             )
         return segments_with_xy_coords
 
@@ -576,6 +623,8 @@ class FaceNetMediaPipeResizer:
         video_file: VideoFile,
         resize_width: int,
         resize_height: int,
+        samples_per_segment: int,
+        face_detect_width: int,
     ) -> list[dict]:
         """
         Add the x and y coordinates to resize each segment to for a given batch.
@@ -629,7 +678,7 @@ class FaceNetMediaPipeResizer:
             analyze_end_sec = end_sec - (end_sec - first_face_sec) / 8
             # get sample locations
             frames_left = int((analyze_end_sec - first_face_sec) * fps + 1)
-            num_samples = min(frames_left, self.SAMPLES_PER_SEGMENT)
+            num_samples = min(frames_left, samples_per_segment)
             segment["numSamples"] = num_samples
             # add first face, sample the rest
             detect_secs.append(first_face_sec)
@@ -640,12 +689,12 @@ class FaceNetMediaPipeResizer:
                 detect_secs.append(first_face_sec + sample_frame / fps)
 
         # detect faces from each segment
-        logging.info("Extracting {} frames".format(len(detect_secs)))
+        logging.debug("Extracting {} frames".format(len(detect_secs)))
         frames = extract_frames(video_file, detect_secs)
-        logging.info("Extracted {} frames".format(len(detect_secs)))
-        face_detections = self._detect_faces(frames)
+        logging.debug("Extracted {} frames".format(len(detect_secs)))
+        face_detections = self._detect_faces(frames, face_detect_width)
 
-        logging.info("Calculating ROI for {} segments.".format(len(segments)))
+        logging.debug("Calculating ROI for {} segments.".format(len(segments)))
         # find roi for each segment
         idx = 0
         for segment in segments:
@@ -672,7 +721,7 @@ class FaceNetMediaPipeResizer:
             crop = self._calc_crop(roi, resize_width, resize_height)
             segment["x"] = int(crop.x)
             segment["y"] = int(crop.y)
-        logging.info("Calculated ROI for {} segments.".format(len(segments)))
+        logging.debug("Calculated ROI for {} segments.".format(len(segments)))
 
         return segments
 
@@ -897,7 +946,20 @@ class FaceNetMediaPipeResizer:
         Parameters
         ----------
         segments: list[dict]
-            The segments to merge.
+            List of speaker segments to merge, each with the following keys
+                speakers: list[int]
+                    the speaker labels of the speakers talking in the segment
+                startTime: float
+                    the start time of the segment
+                endTime: float
+                    the end time of the segment
+                x: int
+                    x-coordinate of the top left corner of the resized segment
+                y: int
+                    y-coordinate of the top left corner of the resized segment
+        video_file: VideoFile
+            The video file that the segments are from
+        
 
         Returns
         -------
@@ -905,19 +967,28 @@ class FaceNetMediaPipeResizer:
             The merged segments.
         """
         idx = 0
+        max_position_difference_ratio = 0.04
+        video_width = video_file.get_width_pixels()
+        video_height = video_file.get_height_pixels()
 
         for _ in range(len(segments) - 1):
             cur_x = segments[idx]["x"]
             next_x = segments[idx + 1]["x"]
             x_diff = abs(cur_x - next_x)
-            if (x_diff / video_file.get_width_pixels()) < 0.04:
+            if (x_diff / video_width) < max_position_difference_ratio:
                 same_x = True
                 segments[idx]["x"] = int((cur_x + next_x) // 2)
             else:
                 same_x = False
 
-            # y coordinate always zero for now, no need for fancy logic
-            same_y = segments[idx]["y"] == segments[idx + 1]["y"]
+            curr_y = segments[idx]["y"]
+            next_y = segments[idx + 1]["y"]
+            y_diff = abs(curr_y - next_y)
+            if (y_diff / video_height) < max_position_difference_ratio:
+                same_y = True
+                segments[idx]["y"] = int((curr_y + next_y) // 2)
+            else:
+                same_y = False
 
             if same_x and same_y:
                 segments[idx]["endTime"] = segments[idx + 1]["endTime"]

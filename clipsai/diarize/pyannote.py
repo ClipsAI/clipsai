@@ -124,7 +124,10 @@ class PyannoteDiarizer:
         for segment, _, speaker_label in pyannote_segments.itertracks(True):
             next_start_sec = segment.start
             next_end_sec = segment.end
-            next_speaker = int(speaker_label.split("_")[1])
+            if speaker_label.split("_")[1] == "":
+                next_speaker = None
+            else:
+                next_speaker = int(speaker_label.split("_")[1])
 
             # skip segments that are too short
             if next_end_sec - next_start_sec < 1.5:
