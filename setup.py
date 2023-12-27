@@ -31,8 +31,9 @@ setup(
         'pyannote.core',
         'onnxruntime',
         'pytest',
-        'pytest-cov',
         'pytest-mock',
+        'psutil',
+        'pandas'
     ],
     zip_safe=False
 )

@@ -17,9 +17,6 @@ use that as the number of speakers to detect.
 # standard library imports
 import logging
 
-# current package imports
-from .segment import SpeakerSegment
-
 # local package imports
 from media.audio_file import AudioFile
 from utils.pytorch import get_compute_device, assert_compute_device_available
@@ -58,7 +55,12 @@ class PyannoteDiarizer:
         ).to(torch.device(device))
         logging.debug("Pyannote using device: {}".format(self.pipeline.device))
 
-    def diarize(self, audio_file: AudioFile) -> list[dict]:
+    def diarize(
+        self,
+        audio_file: AudioFile,
+        min_segment_duration: float = 1.5,
+        time_precision: int = 6
+    ) -> list[dict]:
         """
         Diarizes the audio file.
 
@@ -66,24 +68,30 @@ class PyannoteDiarizer:
         ----------
         audio_file: AudioFile
             the audio file to diarize
+        time_precision: int
+            The number of decimal places for rounding the start and end times of 
+            segments.
+        min_segment_duration: float
+            The minimum duration (in seconds) for a segment to be considered valid.
 
         Returns
         -------
-        list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
+        speaker_segments: list[dict]
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
         """
 
         pyannote_segments: Annotation = self.pipeline({"audio": audio_file.path})
 
         adjusted_speaker_segments = self._adjust_segments(
             pyannote_segments=pyannote_segments,
-            duration=audio_file.get_duration()
+            min_segment_duration=min_segment_duration,
+            duration=audio_file.get_duration(),
+            time_precision=time_precision,
         )
 
         return adjusted_speaker_segments
@@ -91,7 +99,9 @@ class PyannoteDiarizer:
     def _adjust_segments(
         self,
         pyannote_segments: Annotation,
-        duration: float
+        min_segment_duration: float,
+        duration: float,
+        time_precision: int,
     ) -> list[dict]:
         """
         Adjusts and merges speaker segments to achieve an unbroken, non-overlapping
@@ -103,31 +113,38 @@ class PyannoteDiarizer:
             the pyannote speaker segments
         duration: float
             duration of the audio being diarized.
+        time_precision: int
+            The number of decimal places for rounding the start and end times of 
+            segments.
+        min_segment_duration: float
+            The minimum duration (in seconds) for a segment to be considered valid.
 
         Returns
         -------
-        list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
-        """
-        adjusted_speaker_segments = []
-        unique_speakers: set[int] = set()
-        cur_start_sec = 0.000
+        speaker_segments: list[dict]
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
+        """    
         cur_end_sec = None
         cur_speaker = None
+        cur_start_sec = 0.000
+        adjusted_speaker_segments = []
+        unique_speakers: set[int] = set()
 
         for segment, _, speaker_label in pyannote_segments.itertracks(True):
             next_start_sec = segment.start
             next_end_sec = segment.end
-            next_speaker = int(speaker_label.split("_")[1])
+            if speaker_label.split("_")[1] == "":
+                next_speaker = None
+            else:
+                next_speaker = int(speaker_label.split("_")[1])
 
             # skip segments that are too short
-            if next_end_sec - next_start_sec < 1.5:
+            if next_end_sec - next_start_sec < min_segment_duration:
                 continue
 
             # first identified speaker
@@ -155,8 +172,8 @@ class PyannoteDiarizer:
                 speakers = []
             adjusted_speaker_segments.append({
                 "speakers": speakers,
-                "startTime": round(cur_start_sec, 6),
-                "endTime": round(cur_end_sec, 6),
+                "startTime": round(cur_start_sec, time_precision),
+                "endTime": round(cur_end_sec, time_precision),
             })
 
             cur_speaker = next_speaker
@@ -171,8 +188,8 @@ class PyannoteDiarizer:
             speakers = []
         adjusted_speaker_segments.append({
             "speakers": speakers,
-            "startTime": round(cur_start_sec, 6),
-            "endTime": round(duration, 6),
+            "startTime": round(cur_start_sec, time_precision),
+            "endTime": round(duration, time_precision),
         })
 
         adjusted_speaker_segments = self._relabel_speakers(
@@ -197,19 +214,18 @@ class PyannoteDiarizer:
         Parameters
         ----------
         speaker_segments: list[dict]
-            list of speaker segments (dictionaries) with the following keys:
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
         unique_speakers: set[int]
             set of unique speaker labels in the speaker segments
 
         Returns
         -------
-        list[dict]
+        updated_speaker_segments: list[dict]
             list of speaker segments where the speakers are relabeled so that the
             speaker labels are contiguous. Each dictionary contains the following keys:
                 speakers: list[int]

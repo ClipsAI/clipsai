@@ -5,200 +5,138 @@ from unittest.mock import patch, Mock
 from clipsai.diarize.pyannote import PyannoteDiarizer
 
 # third party imports
+import pandas as pd
 from pyannote.core import Segment, Annotation
 import pytest
 
 
 @pytest.fixture
-def mock_pipeline():
-    with patch('pyannote.audio.Pipeline.from_pretrained') as mock:
-        mock.return_value = Mock()
-        yield mock
-
-@pytest.fixture
-def mock_diarizer(mock_pipeline):
-    diarizer = PyannoteDiarizer(auth_token='mock_token')
-    diarizer.pipeline = mock_pipeline
-    return diarizer
-
-@pytest.fixture
-def mock_annotation():
-    annotation = Annotation()
-    annotation[Segment(0, 10)] = 'speaker_0'
-    annotation[Segment(11, 20)] = 'speaker_1'
-    annotation[Segment(21, 30)] = 'speaker_0'
-    return annotation
+def mock_diarizer():
+    with patch('pyannote.audio.Pipeline.from_pretrained', return_value=Mock()):
+        diarizer = PyannoteDiarizer(auth_token='mock_token')
+        diarizer.pipeline = Mock()
+        return diarizer
 
 @pytest.fixture
 def mock_audio_file():
     mock_audio_file = Mock()
+    mock_audio_file.path.return_value = 'mock_audio.mp3'
     mock_audio_file.get_duration.return_value = 30.0
     return mock_audio_file
 
-def test_relabel_speakers_on_discontiguous_speaker_labels(mock_diarizer):
-    initial_segments = [
-        {"speakers": [2], "startTime": 0.0, "endTime": 10.0},
-        {"speakers": [5], "startTime": 10.0, "endTime": 20.0},
-        {"speakers": [2], "startTime": 20.0, "endTime": 30.0}
-    ]
-    
-    relabeled_segments = mock_diarizer._relabel_speakers(
-        speaker_segments=initial_segments, 
-        unique_speakers={2, 5},
-    )
 
-    assert len(relabeled_segments) == len(initial_segments)
-    
-    result = []
-    correct_speaker_labels = {0, 1}
-    for segment in relabeled_segments:
-        for speaker in segment['speakers']:
-            result.append(speaker in correct_speaker_labels)
+@pytest.mark.parametrize("annotation_data, expected_output", [
+    # Test 1: Segments with gaps between them
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_0", "track": "_"},
+            {"segment": Segment(12, 20), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(21, 30), "label": "speaker_0", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 12},
+            {"speakers": [1], "startTime": 12, "endTime": 21},
+            {"speakers": [0], "startTime": 21, "endTime": 30}
+        ]
+    ),
 
-    # all speakers were relabeled correctly        
-    assert all(result) 
+    # Test 2: overlapping segments
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_0", "track": "_"},
+            {"segment": Segment(8, 12), "label": "speaker_2", "track": "_"},
+            {"segment": Segment(10, 20), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(20, 30), "label": "speaker_0", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 8},
+            {"speakers": [2], "startTime": 8, "endTime": 10},
+            {"speakers": [1], "startTime": 10, "endTime": 20},
+            {"speakers": [0], "startTime": 20, "endTime": 30}
+        ]
+    ),
 
-def test_relabel_speakers_on_contiguous_speaker_labels(mock_diarizer):
-    initial_segments = [
-        {"speakers": [0], "startTime": 0.0, "endTime": 10.0},
-        {"speakers": [1], "startTime": 10.0, "endTime": 20.0},
-        {"speakers": [0], "startTime": 20.0, "endTime": 30.0},
-    ]
+    # Test 3: discarding short segments
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_0", "track": "_"},
+            {"segment": Segment(11, 20), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(15, 16), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(21, 30), "label": "speaker_0", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 11},
+            {"speakers": [1], "startTime": 11, "endTime": 21},
+            {"speakers": [0], "startTime": 21, "endTime": 30}
+        ]
+    ),
 
-    relabeled_segments = mock_diarizer._relabel_speakers(
-        speaker_segments=initial_segments,
-        unique_speakers={0, 1},
-    )
+    # Test 4: merge contiguous segments with same speakers
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_0", "track": "_"},
+            {"segment": Segment(10, 12), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(12, 15), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(15, 20), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(20, 30), "label": "speaker_0", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 10},
+            {"speakers": [1], "startTime": 10, "endTime": 20},
+            {"speakers": [0], "startTime": 20, "endTime": 30}
+        ]
+    ),
 
-    assert len(relabeled_segments) == len(initial_segments)
-    assert relabeled_segments == initial_segments
+    # Test 5: handles empty annotation
+    (
+        [],
+        [{"speakers": [], "startTime": 0, "endTime": 30}]
+    ),
 
-def test_relabel_speakers_handles_empty_speaker_lists(mock_diarizer):
-    initial_segments = []
+    # Test 6: relabel speakers with discontiguous speaker labels
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_2", "track": "_"},
+            {"segment": Segment(10, 20), "label": "speaker_5", "track": "_"},
+            {"segment": Segment(20, 30), "label": "speaker_2", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 10},
+            {"speakers": [1], "startTime": 10, "endTime": 20},
+            {"speakers": [0], "startTime": 20, "endTime": 30}
+        ]
+    ),
 
-    relabeled_segments = mock_diarizer._relabel_speakers(
-        speaker_segments=initial_segments,
-        unique_speakers=set(),
-    )
+    # Test 7: relabeling speakers not required with contiguous speaker labels
+    (
+        [
+            {"segment": Segment(0, 10), "label": "speaker_0", "track": "_"},
+            {"segment": Segment(10, 20), "label": "speaker_1", "track": "_"},
+            {"segment": Segment(20, 30), "label": "speaker_0", "track": "_"}
+        ],
+        [
+            {"speakers": [0], "startTime": 0, "endTime": 10},
+            {"speakers": [1], "startTime": 10, "endTime": 20},
+            {"speakers": [0], "startTime": 20, "endTime": 30}
+        ]
+    ),
 
-    assert len(relabeled_segments) == len(initial_segments)
-    assert relabeled_segments == []
+    # Test 8: handles unlabeled speaker
+    (
+        [{"segment": Segment(0, 30), "label": "_", "track": "_"}],
+        [{"speakers": [], "startTime": 0, "endTime": 30}]
+    ),    
+])
 
-def test_relabel_speakers_handles_unlabeled_speaker(mock_diarizer):
-    initial_segments = [
-        {"speakers": [], "startTime": 0.0, "endTime": 10.0},
-        {"speakers": [1], "startTime": 10.0, "endTime": 20.0},
-    ]
+def test_diarize(mock_diarizer, mock_audio_file, annotation_data, expected_output):
+    # handle empty annotation to prevent KeyError
+    if not annotation_data:
+        annotation = Annotation()
+    else:
+        df = pd.DataFrame(annotation_data)
+        annotation = Annotation().from_df(df)
 
-    relabeled_segments = mock_diarizer._relabel_speakers(
-        speaker_segments=initial_segments,
-        unique_speakers={1},
-    )
+    mock_diarizer.pipeline.return_value = annotation
+    output_segments = mock_diarizer.diarize(mock_audio_file)
 
-    assert len(relabeled_segments) == len(initial_segments)
-    assert relabeled_segments[0]["speakers"] == []
-    assert relabeled_segments[1]["speakers"] == [0]
-
-def test_adjust_segments(mock_diarizer, mock_annotation, mock_audio_file):
-    segments = mock_diarizer._adjust_segments(
-        pyannote_segments=mock_annotation,
-        duration=mock_audio_file.get_duration()
-    )
-    
-    assert len(segments) == 3 
-
-    assert segments[0]['speakers'] == [0]
-    assert segments[0]['startTime'] == 0
-    assert segments[0]['endTime'] == 11
-
-    assert segments[1]['speakers'] == [1]
-    assert segments[1]['startTime'] == 11
-    assert segments[1]['endTime'] == 21
-
-    assert segments[2]['speakers'] == [0]
-    assert segments[2]['startTime'] == 21
-    assert segments[2]['endTime'] == mock_audio_file.get_duration()
-
-def test_adjust_segments_handles_overlapping_segments(mock_diarizer, mock_annotation, mock_audio_file):
-    mock_annotation[Segment(8, 15)] = 'speaker_2'  
-    
-    segments = mock_diarizer._adjust_segments(
-        pyannote_segments=mock_annotation,
-        duration=mock_audio_file.get_duration()
-    )
-
-    assert len(segments) == 4
-    
-    assert segments[0]['speakers'] == [0]
-    assert segments[0]['startTime'] == 0
-    assert segments[0]['endTime'] == 8
-
-    assert segments[1]['speakers'] == [2]
-    assert segments[1]['startTime'] == 8
-    assert segments[1]['endTime'] == 11
-
-    assert segments[2]['speakers'] == [1]
-    assert segments[2]['startTime'] == 11
-    assert segments[2]['endTime'] == 21
-
-    assert segments[3]['speakers'] == [0]
-    assert segments[3]['startTime'] == 21
-    assert segments[3]['endTime'] == mock_audio_file.get_duration()
-
-def test_adjust_segments_discards_short_segments(mock_diarizer, mock_annotation, mock_audio_file):
-    mock_annotation[Segment(15, 16)] = 'speaker_1'
-
-    segments = mock_diarizer._adjust_segments(
-        pyannote_segments=mock_annotation,
-        duration=mock_audio_file.get_duration()
-    )
-
-    assert len(segments) == 3
-    
-    assert segments[0]['speakers'] == [0]
-    assert segments[0]['startTime'] == 0
-    assert segments[0]['endTime'] == 11
-
-    assert segments[1]['speakers'] == [1]
-    assert segments[1]['startTime'] == 11
-    assert segments[1]['endTime'] == 21
-
-    assert segments[2]['speakers'] == [0]
-    assert segments[2]['startTime'] == 21
-    assert segments[2]['endTime'] == mock_audio_file.get_duration()
-
-def test_adjust_segments_merges_contiguous_segments_with_same_speakers(mock_diarizer, mock_annotation, mock_audio_file):
-    mock_annotation[Segment(10, 12)] = 'speaker_1'
-
-    segments = mock_diarizer._adjust_segments(
-        pyannote_segments=mock_annotation,
-        duration=mock_audio_file.get_duration()
-    )
-
-    assert len(segments) == 3
-
-    assert segments[0]['speakers'] == [0]
-    assert segments[0]['startTime'] == 0
-    assert segments[0]['endTime'] == 10
-
-    assert segments[1]['speakers'] == [1]
-    assert segments[1]['startTime'] == 10
-    assert segments[1]['endTime'] == 21
-
-    assert segments[2]['speakers'] == [0]
-    assert segments[2]['startTime'] == 21
-    assert segments[2]['endTime'] == mock_audio_file.get_duration()
-
-def test_adjust_segments_on_empty_annotation(mock_diarizer, mock_audio_file):
-    mock_annotation = Annotation()
-
-    segments = mock_diarizer._adjust_segments(
-        pyannote_segments=mock_annotation,
-        duration=mock_audio_file.get_duration()
-    )
-
-    assert len(segments) == 1
-
-    assert segments[0]['speakers'] == []
-    assert segments[0]['startTime'] == 0
-    assert segments[0]['endTime'] == mock_audio_file.get_duration()
+    assert output_segments == expected_output

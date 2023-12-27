@@ -304,3 +304,18 @@ def mem_stats() -> dict:
             "free": free_cpu_memory
         }
     }
+
+def get_free_cpu_memory() -> int:
+    """
+    Returns the free CPU memory in bytes.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    free_memory: int
+        The free CPU memory in bytes.
+    """
+    return psutil.virtual_memory().available
