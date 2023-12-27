@@ -6,7 +6,7 @@ from .texttile_config_manager import TextTileClipFinderConfigManager
 
 # local package imports
 from utils.pytorch import check_valid_torch_device
-from input_validator import InputValidator
+from clipsai.input_validator import InputValidator
 
 
 class ClipInputValidator(InputValidator):
