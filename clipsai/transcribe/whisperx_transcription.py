@@ -301,49 +301,6 @@ class WhisperXTranscription:
             if char_info[i]["startTime"] is not None:
                 return char_info[i]["startTime"]
 
-    def store_as_json_file(self, file_path: str) -> JsonFile:
-        """
-        Stores the transcription as a json file. 'file_path' is overwritten if already
-        exists.
-
-        Parameters
-        ----------
-        file_path: str
-            absolute file path to store the transcription as a json file
-
-        Returns
-        -------
-        None
-        """
-        json_file = JsonFile(file_path)
-        json_file.assert_has_file_extension("json")
-        self._fs_manager.assert_parent_dir_exists(json_file)
-
-        # delete file if it exists
-        json_file.delete()
-
-        # only store necessary data
-        char_info_needed_for_storage = []
-        for char_info in self._char_info:
-            char_info_needed_for_storage.append(
-                {
-                    "char": char_info["char"],
-                    "startTime": char_info["startTime"],
-                    "endTime": char_info["endTime"],
-                    "speaker": char_info["speaker"],
-                }
-            )
-
-        transcription_dict = {
-            "sourceSoftware": self._source_software,
-            "timeSpawned": str(self._time_spawned),
-            "language": self._language,
-            "numSpeakers": self._num_speakers,
-            "charInfo": char_info_needed_for_storage,
-        }
-
-        json_file.create(transcription_dict)
-        return json_file
 
     def find_char_index(self, target_time: float, type_of_time: str) -> int:
         """
@@ -475,6 +432,50 @@ class WhisperXTranscription:
             return left - 1 if left == len(transcript_info) else left
         else:
             return right + 1 if right == -1 else right
+
+    def store_as_json_file(self, file_path: str) -> JsonFile:
+        """
+        Stores the transcription as a json file. 'file_path' is overwritten if already
+        exists.
+
+        Parameters
+        ----------
+        file_path: str
+            absolute file path to store the transcription as a json file
+
+        Returns
+        -------
+        None
+        """
+        json_file = JsonFile(file_path)
+        json_file.assert_has_file_extension("json")
+        self._fs_manager.assert_parent_dir_exists(json_file)
+
+        # delete file if it exists
+        json_file.delete()
+
+        # only store necessary data
+        char_info_needed_for_storage = []
+        for char_info in self._char_info:
+            char_info_needed_for_storage.append(
+                {
+                    "char": char_info["char"],
+                    "startTime": char_info["startTime"],
+                    "endTime": char_info["endTime"],
+                    "speaker": char_info["speaker"],
+                }
+            )
+
+        transcription_dict = {
+            "sourceSoftware": self._source_software,
+            "timeSpawned": str(self._time_spawned),
+            "language": self._language,
+            "numSpeakers": self._num_speakers,
+            "charInfo": char_info_needed_for_storage,
+        }
+
+        json_file.create(transcription_dict)
+        return json_file
 
     def store_as_srt_file(
         self,

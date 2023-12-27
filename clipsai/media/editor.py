@@ -1254,11 +1254,9 @@ class MediaEditor:
             media_file = AudioVideoFile(media_file.path)
         elif media_file.has_audio_stream():
             media_file = AudioFile(media_file.path)
-        elif media_file.has_video_stream():
-            media_file = VideoFile(media_file.path)
         else:
             msg = (
-                "File '{}' must be a VideoFile, AudioFile, or AudioVideoFile not {}."
+                "File '{}' must be a AudioFile, or AudioVideoFile not {}."
                 "".format(media_file.path, type(media_file))
             )
             logging.error(msg)
