@@ -9,6 +9,7 @@ Notes
 import logging
 
 # current package imports
+from .crops import Crops, CropSegment
 from .exceptions import FaceNetMediaPipeResizerError
 from .rect import Rect
 from .image import extract_frames, calc_img_bytes
@@ -35,14 +36,32 @@ class FaceNetMediaPipeResizer:
     """
 
     def __init__(
-            self,
-            face_detect_margin: int = 20,
-            face_detect_post_process: bool = False,
-            device: str = "auto"
+        self,
+        face_detect_margin: int = 20,
+        face_detect_post_process: bool = False,
+        device: str = "auto"
     ) -> None:
         """
-        Initialize the FaceNet and MediaPipe classes
+        Initializes the FaceNetMediaPipeResizer with specific configurations for face 
+        detection. This class uses FaceNet for detecting faces and MediaPipe for 
+        analyzing mouth to aspect ratio to determine whose speaking within video frames.
+
+        Parameters
+        ----------
+        face_detect_margin: int, optional
+            The margin around detected faces, specified in pixels. Increasing this
+            value results in a larger area around each detected face being included.
+            Default is 20 pixels.
+        face_detect_post_process: bool, optional
+            Determines whether to apply post-processing on the detected faces. Setting 
+            this to False prevents normalization of output images, making them appear 
+            more natural to the human eye. Default is False (no post-processing).
+        device: str, optional
+            The compute device to be used for processing. Can be set to 'auto' to 
+            automatically select the best available GPU or CPU, or manually set to 
+            'cuda' for GPU or 'cpu' for CPU. Default is 'auto'.
         """
+
         if device == "auto":
             device = pytorch.get_compute_device()
         pytorch.assert_compute_device_available(device)
@@ -67,7 +86,7 @@ class FaceNetMediaPipeResizer:
         face_detect_width: int = 960,
         n_face_detect_batches: int = 8,
         scene_merge_threshold: float = 0.25,
-    ) -> list[dict]:
+    ) -> Crops:
         """
         Calculates the coordinates to resize the video to for different
         segments given the diarized speaker segments and the desired aspect
@@ -76,48 +95,33 @@ class FaceNetMediaPipeResizer:
         Parameters
         ----------
         video_file: VideoFile
-            the video file to resize
+            The video file to resize
         speaker_segments: list[dict]
-            List of speaker segments (dicts), each with the following keys
-                speakers: list[int]
-                    list of speakers (represented by int) talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
+            speakers: list[int]
+                list of speakers (represented by int) talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
         scene_changes: list[float]
             List of scene change times in seconds
         aspect_ratio: tuple[int, int]
-            the width:height aspect ratio to resize the video to
+            The (width,height) aspect ratio to resize the video to
+        samples_per_segment: int
+            Number of frames to sample per segment for face detection.
+        face_detect_width: int
+            The width to use for face detection
         n_face_detect_batches: int
-            number of batches for GPU face detection in a video file
+            Number of batches for GPU face detection in a video file
         scene_merge_threshold: float
-            the threshold (in seconds) for merging scene changes with speaker segments
+            The threshold in seconds for merging scene changes with speaker segments.
+            Scene changes within this threshold of a segment's start or end time will
+            cause the segment to be adjusted.
 
         Returns
         -------
-        dict[int, int, list[dict]]
-            dictionary with the following keys:
-                originalWidth: int
-                    original width of the video
-                originalHeight: int
-                    original height of the video
-                resizeWidth: int
-                    resized width of the video
-                resizeHeight: int
-                    resized height of the video
-                segments: list
-                    list of speaker segments (dictionaries) with the following keys
-                        speakers: list[int]
-                            the speaker labels of the speakers talking in the segment
-                        startTime: float
-                            the start time of the segment
-                        endTime: float
-                            the end time of the segment
-                        x: int
-                            x-coordinate of the top left corner of the resized segment
-                        y: int
-                            y-coordinate of the top left corner of the resized segment
+        Crops
+            the resized speaker segments
         """
         logging.debug("Video Resolution: {}x{}".format(
             video_file.get_width_pixels(), video_file.get_height_pixels()
@@ -135,7 +139,9 @@ class FaceNetMediaPipeResizer:
             len(speaker_segments), len(scene_changes)
         ))
         segments = self._merge_scene_change_and_speaker_segments(
-            speaker_segments, scene_changes, scene_merge_threshold
+            speaker_segments,
+            scene_changes,
+            scene_merge_threshold
         )
         logging.debug("Video has {} distinct segments.".format(len(segments)))
 
@@ -167,15 +173,16 @@ class FaceNetMediaPipeResizer:
             unmerge_segments_length - len(segments)
         ))
 
-        resize_info = {
-            "originalWidth": video_file.get_width_pixels(),
-            "originalHeight": video_file.get_height_pixels(),
-            "resizeWidth": resize_width,
-            "resizeHeight": resize_height,
-            "segments": segments,
-        }
+        crop_segments = [CropSegment(**segment) for segment in segments]
+        crops = Crops(
+            original_width=video_file.get_width_pixels(),
+            original_height=video_file.get_height_pixels(),
+            crop_width=resize_width,
+            crop_height=resize_height,
+            segments=crop_segments,
+        )
 
-        return resize_info
+        return crops
 
     def _calc_resize_width_and_height_pixels(
         self,
@@ -227,31 +234,34 @@ class FaceNetMediaPipeResizer:
         scene_merge_threshold: float,
     ) -> list[dict]:
         """
-        Merge scene change segments with speaker segments.
+        Merge scene change segments with speaker segments based on a specified 
+        threshold.
 
         Parameters
         ----------
         speaker_segments: list[dict]
-            List of speaker_segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
         scene_changes: list[float]
             List of scene change times in seconds.
+        scene_merge_threshold: float
+            The threshold in seconds for merging scene changes with speaker segments.
+            Scene changes within this threshold of a segment's start or end time will
+            cause the segment to be adjusted.
 
         Returns
         -------
-        list[dict]
-            List of segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
+        updated_speaker_segments: list[dict]
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
         """
         segments_idx = 0
         for scene_change_sec in scene_changes:
@@ -427,6 +437,8 @@ class FaceNetMediaPipeResizer:
             The video file to analyze.
         num_frames: int
             The number of frames to analyze.
+        face_detect_width: int
+            The width to use for face detection.
         n_face_detect_batches: int
             Number of batches for GPU face detection in a video file.
 
@@ -496,10 +508,10 @@ class FaceNetMediaPipeResizer:
 
         Parameters
         ----------
-        video_file: VideoFile
-            The video file to detect faces in.
-        detect_secs: list[float]
-            The seconds to detect faces in.
+        frames: list[np.ndarray]
+            The frames to detect faces in.
+        face_detect_width: int
+            The width to use for face detection.
 
         Returns
         -------
@@ -555,38 +567,43 @@ class FaceNetMediaPipeResizer:
         Parameters
         ----------
         segments: list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
-                firstFaceSec: float
-                    the first second in the segment with a face
-                foundFace: bool
-                    whether or not a face was found in the segment
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
+            firstFaceSec: float
+                the first second in the segment with a face
+            foundFace: bool
+                whether or not a face was found in the segment
         video_file: VideoFile
             The video file to analyze.
         resize_width: int
             The width to resize the video to.
         resize_height: int
             The height to resize the video to.
+        samples_per_segment: int
+            Number of samples to take per segment for face detection.
+        face_detect_width: int
+            Width to resize the frames to for face detection.
+        n_face_detect_batches: int
+            Number of batches to process for face detection.
+        
 
         Returns
         -------
-        list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
-                x: int
-                    x-coordinate of the top left corner of the resized segment
-                y: int
-                    y-coordinate of the top left corner of the resized segment
+        updated_segments: list[dict]
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
+            x: int
+                x-coordinate of the top left corner of the resized segment
+            y: int
+                y-coordinate of the top left corner of the resized segment
         """
         num_segments = len(segments)
         num_frames = num_segments * samples_per_segment
@@ -632,38 +649,40 @@ class FaceNetMediaPipeResizer:
         Parameters
         ----------
         segments: list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
-                firstFaceSec: float
-                    the first second in the segment with a face
-                foundFace: bool
-                    whether or not a face was found in the segment
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
+            firstFaceSec: float
+                the first second in the segment with a face
+            foundFace: bool
+                whether or not a face was found in the segment
         video_file: VideoFile
             The video file to analyze.
         resize_width: int
             The width to resize the video to.
         resize_height: int
             The height to resize the video to.
+        samples_per_segment: int
+            Number of samples to take per segment for analyzing face locations.
+        face_detect_width: int
+            Width to which the video frames are resized for face detection.
 
         Returns
         -------
-        list[dict]
-            List of speaker segments (dictionaries), each with the following keys
-                speakers: list[int]
-                    list of speaker numbers for the speakers talking in the segment
-                startTime: float
-                    start time of the segment in seconds
-                endTime: float
-                    end time of the segment in seconds
-                x: int
-                    x-coordinate of the top left corner of the resized segment
-                y: int
-                    y-coordinate of the top left corner of the resized segment
+        updated_segments: list[dict]
+            speakers: list[int]
+                list of speaker numbers for the speakers talking in the segment
+            startTime: float
+                start time of the segment in seconds
+            endTime: float
+                end time of the segment in seconds
+            x: int
+                x-coordinate of the top left corner of the resized segment
+            y: int
+                y-coordinate of the top left corner of the resized segment
         """
         fps = video_file.get_frame_rate()
 
@@ -878,7 +897,7 @@ class FaceNetMediaPipeResizer:
 
         Parameters
         ----------
-        face_shape: np.ndarray
+        face: np.ndarray
             Pytorch array of a face
 
         Returns
@@ -946,17 +965,16 @@ class FaceNetMediaPipeResizer:
         Parameters
         ----------
         segments: list[dict]
-            List of speaker segments to merge, each with the following keys
-                speakers: list[int]
-                    the speaker labels of the speakers talking in the segment
-                startTime: float
-                    the start time of the segment
-                endTime: float
-                    the end time of the segment
-                x: int
-                    x-coordinate of the top left corner of the resized segment
-                y: int
-                    y-coordinate of the top left corner of the resized segment
+            speakers: list[int]
+                the speaker labels of the speakers talking in the segment
+            startTime: float
+                the start time of the segment
+            endTime: float
+                the end time of the segment
+            x: int
+                x-coordinate of the top left corner of the resized segment
+            y: int
+                y-coordinate of the top left corner of the resized segment
         video_file: VideoFile
             The video file that the segments are from
         
