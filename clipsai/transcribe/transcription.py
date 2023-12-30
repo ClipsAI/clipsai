@@ -1,5 +1,5 @@
 """
-Transcriptions from WhisperX.
+Transcriptions generated using WhisperX.
 
 Notes
 -----
@@ -29,7 +29,7 @@ from nltk.tokenize import sent_tokenize
 nltk.download("punkt")
 
 
-class WhisperXTranscription:
+class Transcription:
     """
     A class for whisperx transcription data viewing, storage, and manipulation.
     """
@@ -39,7 +39,7 @@ class WhisperXTranscription:
         transcription: dict or JsonFile,
     ) -> None:
         """
-        Initialize WhisperXTranscription Class.
+        Initialize Transcription Class.
 
         Parameters
         ----------
@@ -53,9 +53,9 @@ class WhisperXTranscription:
         """
         self._fs_manager = FileSystemManager()
 
-        # set in __init_from_json_file() or __init_from_dict()
+        # the below are set in __init_from_json_file() or __init_from_dict()
         self._source_software = None
-        self._time_spawned = None
+        self._time_created = None
         self._language = None
         self._num_speakers = None
         self._char_info = None
@@ -72,7 +72,8 @@ class WhisperXTranscription:
         else:
             self._init_from_dict(transcription)
 
-    def get_source_software(self) -> str:
+    @property
+    def source_software(self) -> str:
         """
         Returns the name of the software used to transcribe the audio
 
@@ -87,7 +88,8 @@ class WhisperXTranscription:
         """
         return self._source_software
 
-    def get_time_spawned(self) -> datetime:
+    @property
+    def time_created(self) -> datetime:
         """
         Returns the time the transcription was created
 
@@ -97,14 +99,15 @@ class WhisperXTranscription:
 
         Returns
         -------
-        time_spawned: datetime
+        time_created: datetime
             the time created as a datetime object
         """
-        return self._time_spawned
+        return self._time_created
 
-    def get_language(self) -> str:
+    @property
+    def language(self) -> str:
         """
-        Returns the transcription language
+        Returns the language that the transcription is in.
 
         Parameters
         ----------
@@ -117,9 +120,10 @@ class WhisperXTranscription:
         """
         return self._language
 
-    def get_num_speakers(self) -> int:
+    @property
+    def text(self) -> str:
         """
-        Returns the number of speakers in the transcription
+        Returns the full text of the transcription
 
         Parameters
         ----------
@@ -127,10 +131,63 @@ class WhisperXTranscription:
 
         Returns
         -------
-        int
-            the number of speakers in the transcription
+        text: str
+            the full text of the transcription
         """
-        return self._num_speakers
+        return self._text
+
+    @property
+    def sentences(self) -> list:
+        """
+        Returns the sentences of the text.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        list[str]
+            list of sentences
+        """
+        sentences = []
+        for sentence_info in self.get_sentence_info():
+            sentences.append(sentence_info["sentence"])
+        return sentences
+
+    @property
+    def start_time(self) -> float:
+        """
+        Returns the start time of the transcript in seconds.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        float
+            the start time of the transcript in seconds
+        """
+        return 0.0
+
+    @property
+    def end_time(self) -> float:
+        """
+        Returns the end time of the transcript in seconds.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        float
+            the end time of the transcript in seconds
+        """
+        char_info = self.get_char_info()
+        for i in range(len(char_info) - 1, -1, -1):
+            if char_info[i]["endTime"] is not None:
+                return char_info[i]["endTime"]
+            if char_info[i]["startTime"] is not None:
+                return char_info[i]["startTime"]
 
     def get_text(self) -> str:
         """
@@ -158,17 +215,17 @@ class WhisperXTranscription:
         Parameters
         ----------
         start_time: float
-            start time of the character info in seconds. If None, returns all character
-            info
+            start time of the character info in seconds.
+            If None, returns all character info
         end_time: float
-            end time of the character info in seconds. If None, returns all character
-            info
+            end time of the character info in seconds.
+            If None, returns all character info
 
         Returns
         -------
         list[dict]
-            list of dictionaries where each dictionary contains info about a single
-            character in the text
+            list of dictionaries where each dictionary contains
+            info about a single character in the text
         """
         self._assert_valid_times(start_time, end_time)
         char_info = self._char_info
@@ -180,7 +237,7 @@ class WhisperXTranscription:
         else:
             start_index = self.find_char_index(start_time, type_of_time="start")
             end_index = self.find_char_index(end_time, type_of_time="end")
-            return char_info[start_index : end_index + 1]
+            return char_info[start_index: end_index + 1]
 
     def get_word_info(
         self,
@@ -193,15 +250,17 @@ class WhisperXTranscription:
         Parameters
         ----------
         start_time: float
-            start time of the word info in seconds. If None, returns all word info
+            start time of the word info in seconds.
+            If None, returns all word info
         end_time: float
-            end time of the word info in seconds. If None, returns all word info
+            end time of the word info in seconds.
+            If None, returns all word info
 
         Returns
         -------
         list[dict]
-            list of dictionaries where each dictionary contains info about a single
-            word in the text
+            list of dictionaries where each dictionary contains
+            info about a single word in the text
         """
         self._assert_valid_times(start_time, end_time)
 
@@ -215,7 +274,7 @@ class WhisperXTranscription:
         else:
             start_index = self.find_word_index(start_time, type_of_time="start")
             end_index = self.find_word_index(end_time, type_of_time="end")
-            return word_info[start_index : end_index + 1]
+            return word_info[start_index: end_index + 1]
 
     def get_sentence_info(
         self,
@@ -249,58 +308,6 @@ class WhisperXTranscription:
             start_index = self.find_sentence_index(start_time, type_of_time="start")
             end_index = self.find_sentence_index(end_time, type_of_time="end")
             return sentence_info[start_index : end_index + 1]
-
-    def get_sentences(self) -> list:
-        """
-        Returns the sentences of the text.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        list[str]
-            list of sentences
-        """
-        sentences = []
-        for sentence_info in self.get_sentence_info():
-            sentences.append(sentence_info["sentence"])
-        return sentences
-
-    def get_start_time(self) -> float:
-        """
-        Returns the start time of the transcript in seconds.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        float
-            the start time of the transcript in seconds
-        """
-        return 0.0
-
-    def get_end_time(self) -> float:
-        """
-        Returns the end time of the transcript in seconds.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        float
-            the end time of the transcript in seconds
-        """
-        char_info = self.get_char_info()
-        for i in range(len(char_info) - 1, -1, -1):
-            if char_info[i]["endTime"] is not None:
-                return char_info[i]["endTime"]
-            if char_info[i]["startTime"] is not None:
-                return char_info[i]["startTime"]
-
 
     def find_char_index(self, target_time: float, type_of_time: str) -> int:
         """
@@ -403,13 +410,13 @@ class WhisperXTranscription:
         int
             The index that is closest to 'target_time'
         """
-        transcript_start = self.get_start_time()
-        transcript_end = self.get_end_time()
+        transcript_start = self.start_time
+        transcript_end = self.end_time
         if (transcript_start <= target_time <= transcript_end) is False:
             err = (
                 "target_time '{}' seconds is not within the range of the transcript "
                 "times: {} - {}".format(
-                    target_time, self.get_start_time(), self.get_end_time()
+                    target_time, self.start_time, self.end_time
                 )
             )
             logging.error(err)
@@ -468,7 +475,7 @@ class WhisperXTranscription:
 
         transcription_dict = {
             "sourceSoftware": self._source_software,
-            "timeSpawned": str(self._time_spawned),
+            "timeCreated": str(self._time_created),
             "language": self._language,
             "numSpeakers": self._num_speakers,
             "charInfo": char_info_needed_for_storage,
@@ -506,7 +513,7 @@ class WhisperXTranscription:
         srt_file.assert_has_file_extension("srt")
         self._fs_manager.assert_parent_dir_exists(srt_file)
 
-        # delete old file to write new one
+        # delete old file if it exists to write new one
         srt_file.delete()
 
         # build subtitles
@@ -671,12 +678,12 @@ class WhisperXTranscription:
         """
         self._assert_valid_transcription_data(transcription)
 
-        if isinstance(transcription["timeSpawned"], str):
-            transcription["timeSpawned"] = datetime.strptime(
-                transcription["timeSpawned"], "%Y-%m-%d %H:%M:%S.%f"
+        if isinstance(transcription["timeCreated"], str):
+            transcription["timeCreated"] = datetime.strptime(
+                transcription["timeCreated"], "%Y-%m-%d %H:%M:%S.%f"
             )
 
-        self._time_spawned = transcription["timeSpawned"]
+        self._time_created = transcription["timeCreated"]
         self._source_software = transcription["sourceSoftware"]
         self._language = transcription["language"]
         self._num_speakers = transcription["numSpeakers"]
@@ -703,7 +710,7 @@ class WhisperXTranscription:
         # ensure transcription has valid keys and datatypes
         transcription_keys_correct_data_types = {
             "sourceSoftware": (str),
-            "timeSpawned": (datetime, str),
+            "timeCreated": (datetime, str),
             "language": (str),
             "numSpeakers": (int, type(None)),
             "charInfo": (list),
@@ -1137,11 +1144,11 @@ class WhisperXTranscription:
             raise WhisperXTranscriptionError(err)
 
         # end time can't exceed transcription end time
-        if end_time > self.get_end_time():
+        if end_time > self.end_time:
             err = (
                 "end_time ({} seconds) must be less than or equal to the transcript's "
                 "end time ({} seconds)".format(
-                    end_time, self.get_end_time()
+                    end_time, self.end_time
                 )
             )
             logging.error(err)
@@ -1171,14 +1178,15 @@ class WhisperXTranscription:
         transcription = (
             "{}\n"
             "".format(
-                self.get_text()
+                self.text()
             )
         )
         return transcription
 
     def get_info(self) -> str:
         """
-        Returns a string containing the transcription information
+        Returns a string containing the transcription information, namely
+        sourceSoftware, timeCreated, and the language the transcript is in.
 
         Parameters
         ----------
@@ -1190,12 +1198,11 @@ class WhisperXTranscription:
             string containing the transcription information
         """
         info = (
-            "sourceSoftware: {}\ntimeCreated: {}\nlanguage: {}\nnumSpeakers: {}\n"
+            "sourceSoftware: {}\ntimeCreated: {}\nlanguage: {}\n"
             "".format(
-                self.get_source_software(),
-                self.get_time_spawned(),
-                self.get_language(),
-                self.get_num_speakers(),
+                self.source_software,
+                self.time_created,
+                self.language,
             )
         )
         return info

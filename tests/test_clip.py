@@ -3,7 +3,8 @@ from unittest.mock import patch, MagicMock
 from clipsai.clip.clip import clip
 from clipsai.clip.clip_input_validator import ClipInputValidator
 from clipsai.clip.texttile_config_manager import TextTileClipFinderConfigManager
-from clipsai.transcribe.whisperx_transcription import WhisperXTranscription
+from clipsai.transcribe.transcription import Transcription
+from clipsai.clip.clip_model import Clip
 
 
 @pytest.fixture
@@ -24,8 +25,8 @@ def mock_texttile_clip_finder():
 
 @pytest.fixture
 def valid_transcription():
-    transcription = MagicMock(spec=WhisperXTranscription)
-    transcription.get_end_time.return_value = 800.0
+    transcription = MagicMock(spec=Transcription)
+    transcription.end_time = 800.0
     transcription.get_sentence_info.return_value = [{"sentence": "Example sentence"}]
     return transcription
 
@@ -75,7 +76,7 @@ def test_texttile_config_manager_invalid_config(texttile_config_manager):
         "cutoff_policy": "invalid_policy",
         "embedding_aggregation_pool_method": "invalid_method",
         "max_clip_duration_secs": 5,
-        "min_clip_duration_secs": 10, 
+        "min_clip_duration_secs": 10,
         "smoothing_width": 1,
         "window_compare_pool_method": "invalid_method",
     }
@@ -87,6 +88,7 @@ def test_clip_with_valid_input(valid_transcription, mock_texttile_clip_finder):
     mock_clip_finder = mock_texttile_clip_finder.return_value
     mock_clip_finder.find_clips.return_value = [{"startTime": 100, "endTime": 200}]
     result = clip(valid_transcription, device="cpu", min_clip_time=15, max_clip_time=900)
+    print(type(result))
     assert isinstance(result, list)
 
 
@@ -94,4 +96,5 @@ def test_clip_with_invalid_input(valid_transcription, mock_texttile_clip_finder)
     mock_clip_finder = mock_texttile_clip_finder.return_value
     mock_clip_finder.find_clips.side_effect = Exception("Invalid input")
     result = clip(valid_transcription, device="unknown_device", min_clip_time=-5, max_clip_time=5)
-    assert result == {"state": "failed"}
+    print(result)
+    assert result["success"] is False

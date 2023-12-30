@@ -11,11 +11,11 @@ from .clip_model import Clip
 
 # local package imports
 from utils.exception_handler import ExceptionHandler
-from transcribe.whisperx_transcription import WhisperXTranscription
+from transcribe.transcription import Transcription
 
 
 def clip(
-    transcription: WhisperXTranscription,
+    transcription: Transcription,
     device: str = "auto",
     min_clip_time: float = 15,
     max_clip_time: float = 900,
@@ -26,7 +26,7 @@ def clip(
 
     Parameters
     ----------
-    transcription: WhisperXTranscription
+    transcription: Transcription
         The transcription of the media file.
     device: str
         The device to use when clipping on. Ex: 'cpu', 'cuda'
