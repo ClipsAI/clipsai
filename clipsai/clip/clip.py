@@ -7,25 +7,26 @@ import logging
 # current package imports
 from .clip_input_validator import ClipInputValidator
 from .texttile import TextTileClipFinder
+from .clip_model import Clip
 
 # local package imports
 from utils.exception_handler import ExceptionHandler
-from transcribe.whisperx_transcription import WhisperXTranscription
+from transcribe.transcription import Transcription
 
 
 def clip(
-    transcription: WhisperXTranscription,
+    transcription: Transcription,
     device: str = "auto",
     min_clip_time: float = 15,
     max_clip_time: float = 900,
-) -> list:
+) -> list[Clip]:
     """
     Takes in the transcript of an mp4 or mp3 file and finds engaging audio or
     video clips based on the passed in transcript.
 
     Parameters
     ----------
-    transcription: WhisperXTranscription
+    transcription: Transcription
         The transcription of the media file.
     device: str
         The device to use when clipping on. Ex: 'cpu', 'cuda'
@@ -36,9 +37,10 @@ def clip(
 
     Returns
     -------
-    list
-        The list of clip info, each containing a start_char, end_char,
-        start_time, and end_time.
+    list[Clip]
+        A list containing all of the clips found in the media file. Each clip
+        contains a start_time, end_time, start_char, and end_char,
+        corresponding to the transcript.
     """
     # validate the input request data
     try:
@@ -65,9 +67,10 @@ def clip(
             "status": status_code,
             "message": err_msg,
             "stackTraceInfo": stack_trace,
+            "data": input_data,
         }
         logging.error(error_info)
-        return {"state": "failed"}
+        return error_info
 
     # run the clip process
     try:
@@ -88,11 +91,12 @@ def clip(
         logging.debug("POPULATING LIST OF CLIPS")
         clips = []
         for clip_info in clip_infos:
-            clip = {}
-            clip["startTime"] = clip_info["startTime"]
-            clip["endTime"] = clip_info["endTime"]
-            clip["startChar"] = clip_info["startChar"]
-            clip["endChar"] = clip_info["endChar"]
+            clip = Clip(
+                clip_info["startTime"],
+                clip_info["endTime"],
+                clip_info["startChar"],
+                clip_info["endChar"]
+            )
             clips.append(clip)
 
         logging.debug("FINISHED CLIPPING MEDIA FILE")
@@ -109,8 +113,9 @@ def clip(
             "status": status_code,
             "message": err_msg,
             "stackTraceInfo": stack_trace,
+            "data": input_data,
         }
         logging.error("ERROR INFO FOR FAILED REQUESTR: {}".format(error_info))
         logging.error("DATA FOR FAILED REQUEST: {}".format(input_data))
 
-        return {"state": "failed"}
+        return error_info

@@ -6,8 +6,8 @@ prerequisite to clipping it.
 import logging
 
 # current package imports
-from .whisperx_transcriber import WhisperXTranscriber
-from .whisperx_transcription import WhisperXTranscription
+from .transcriber import WhisperXTranscriber
+from .transcription import Transcription
 from .transcribe_input_validator import TranscribeInputValidator
 
 # local package imports
@@ -17,7 +17,7 @@ from media.editor import MediaEditor
 
 def transcribe(
     media_file_path: str, language_code: str = "auto", device: str = "auto"
-) -> WhisperXTranscription:
+) -> Transcription:
     """
     Takes in a file in the form of mp3 or mp4 and transcribes it using whisper.
 
@@ -32,8 +32,8 @@ def transcribe(
 
     Returns
     -------
-    WhisperXTranscription
-        The WhispeXTranscription object containing transcription information.
+    Transcription
+        The Transcription object containing transcription information.
     """
     # validate the input request data
     try:

@@ -12,7 +12,7 @@ import logging
 # current package imports
 from .exceptions import NoSpeechError
 from .whisperx_config_manager import WhisperXTranscriberConfigManager
-from .whisperx_transcription import WhisperXTranscription
+from .transcription import Transcription
 
 # local imports
 from media.audio_file import AudioFile
@@ -74,7 +74,7 @@ class WhisperXTranscriber:
         media_file: AudioFile,
         iso6391_lang_code: str or None = None,
         batch_size: int = 16,
-    ) -> WhisperXTranscription:
+    ) -> Transcription:
         """
         Transcribes the media file
 
@@ -88,7 +88,7 @@ class WhisperXTranscriber:
             reduce if low in GPU memory (not actually sure what it does though -Ben)
         Returns
         -------
-        WhisperXTranscription
+        Transcription
             the media file transcription
         """
         self._type_checker.assert_type(media_file, "media_file", (AudioFile))
@@ -207,12 +207,12 @@ class WhisperXTranscriber:
 
         transcription_dict = {
             "sourceSoftware": "whisperx-v3",
-            "timeSpawned": datetime.now(),
+            "timeCreated": datetime.now(),
             "language": transcription["language"],
             "numSpeakers": None,
             "charInfo": char_info,
         }
-        return WhisperXTranscription(transcription_dict)
+        return Transcription(transcription_dict)
 
     def detect_language(self, media_file: AudioFile) -> str:
         """

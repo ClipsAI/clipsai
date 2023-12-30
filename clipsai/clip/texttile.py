@@ -11,7 +11,7 @@ from .roberta import RobertaTextEmbedder
 from .texttiler import TextTiler
 
 # local package imports
-from transcribe.whisperx_transcription import WhisperXTranscription
+from transcribe.transcription import Transcription
 from utils.pytorch import get_compute_device, assert_compute_device_available
 
 # 3rd party imports
@@ -89,14 +89,14 @@ class TextTileClipFinder:
 
     def find_clips(
         self,
-        transcription: WhisperXTranscription,
+        transcription: Transcription,
     ) -> list[dict]:
         """
         Finds clips within some audio transcription using the TextTiling Algorithm
 
         Parameters
         ----------
-        transcription: TranscriptionWhisperX
+        transcription: Transcription
             the transcription of the source media to find clips within
         save_results: bool
             if True, saves the results of the TextTiling algorithm plots
@@ -118,12 +118,12 @@ class TextTileClipFinder:
 
         # add full media as clip
         clips = []
-        if transcription.get_end_time() <= 900:
+        if transcription.end_time <= 900:
             full_media_clip = {}
             full_media_clip["startChar"] = 0
             full_media_clip["endChar"] = len(transcription.get_char_info())
             full_media_clip["startTime"] = 0
-            full_media_clip["endTime"] = transcription.get_end_time()
+            full_media_clip["endTime"] = transcription.end_time
             full_media_clip["norm"] = 1.0
             clips.append(full_media_clip)
 
