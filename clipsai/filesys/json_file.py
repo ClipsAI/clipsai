@@ -12,7 +12,7 @@ from .file import File
 from utils.type_checker import TypeChecker
 
 
-class JsonFile(File):
+class JSONFile(File):
     """
     A class for working with json files in the local file system.
     """
