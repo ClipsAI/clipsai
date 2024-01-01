@@ -9,10 +9,11 @@ Notes
 import logging
 
 # current package imports
-from .crops import Crops, CropSegment
+from .crops import Crops
 from .exceptions import FaceNetMediaPipeResizerError
-from .rect import Rect
 from .image import extract_frames, calc_img_bytes
+from .rect import Rect
+from .segment import Segment
 
 # local package imports
 from media.editor import MediaEditor
@@ -173,7 +174,7 @@ class FaceNetMediaPipeResizer:
             unmerge_segments_length - len(segments)
         ))
 
-        crop_segments = [CropSegment(**segment) for segment in segments]
+        crop_segments = [Segment(**segment) for segment in segments]
         crops = Crops(
             original_width=video_file.get_width_pixels(),
             original_height=video_file.get_height_pixels(),
