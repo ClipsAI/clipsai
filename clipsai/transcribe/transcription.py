@@ -13,12 +13,11 @@ from datetime import datetime
 import logging
 
 # current package imports
-from .exceptions import WhisperXTranscriptionError
+from .exceptions import TranscriptionError
+from .transcription_element import Sentence, Word, Character
 
 # local imports
-from filesys.json_file import JsonFile
-from filesys.srt_file import SrtFile
-from filesys.pdf_file import PdfFile
+from filesys.json_file import JSONFile
 from filesys.manager import FileSystemManager
 from utils.type_checker import TypeChecker
 
@@ -36,16 +35,16 @@ class Transcription:
 
     def __init__(
         self,
-        transcription: dict or JsonFile,
+        transcription: dict or JSONFile,
     ) -> None:
         """
         Initialize Transcription Class.
 
         Parameters
         ----------
-        transcription: dict or JsonFile
+        transcription: dict or JSONFile
             - a dictionary object containing whisperx transcription
-            - a JsonFile containing a whisperx transcription
+            - a JSONFile containing a whisperx transcription
 
         Returns
         -------
@@ -55,7 +54,7 @@ class Transcription:
 
         # the below are set in __init_from_json_file() or __init_from_dict()
         self._source_software = None
-        self._time_created = None
+        self._created_time = None
         self._language = None
         self._num_speakers = None
         self._char_info = None
@@ -65,9 +64,9 @@ class Transcription:
         self._sentence_info = None
 
         self._type_checker = TypeChecker()
-        self._type_checker.assert_type(transcription, "transcription", (dict, JsonFile))
+        self._type_checker.assert_type(transcription, "transcription", (dict, JSONFile))
 
-        if isinstance(transcription, JsonFile):
+        if isinstance(transcription, JSONFile):
             self._init_from_json_file(transcription)
         else:
             self._init_from_dict(transcription)
@@ -76,96 +75,27 @@ class Transcription:
     def source_software(self) -> str:
         """
         Returns the name of the software used to transcribe the audio
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        str
-            Name of the software used to transcribe the audio
         """
         return self._source_software
 
     @property
-    def time_created(self) -> datetime:
+    def created_time(self) -> datetime:
         """
         Returns the time the transcription was created
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        time_created: datetime
-            the time created as a datetime object
         """
-        return self._time_created
+        return self._created_time
 
     @property
     def language(self) -> str:
         """
-        Returns the language that the transcription is in.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        str
-            ISO 639-1 code of the transcription language
+        Returns the language of the transcription.
         """
         return self._language
-
-    @property
-    def text(self) -> str:
-        """
-        Returns the full text of the transcription
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        text: str
-            the full text of the transcription
-        """
-        return self._text
-
-    @property
-    def sentences(self) -> list:
-        """
-        Returns the sentences of the text.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        list[str]
-            list of sentences
-        """
-        sentences = []
-        for sentence_info in self.get_sentence_info():
-            sentences.append(sentence_info["sentence"])
-        return sentences
-
+    
     @property
     def start_time(self) -> float:
         """
         Returns the start time of the transcript in seconds.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        float
-            the start time of the transcript in seconds
         """
         return 0.0
 
@@ -173,14 +103,6 @@ class Transcription:
     def end_time(self) -> float:
         """
         Returns the end time of the transcript in seconds.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        float
-            the end time of the transcript in seconds
         """
         char_info = self.get_char_info()
         for i in range(len(char_info) - 1, -1, -1):
@@ -189,20 +111,62 @@ class Transcription:
             if char_info[i]["startTime"] is not None:
                 return char_info[i]["startTime"]
 
-    def get_text(self) -> str:
+    @property
+    def text(self) -> str:
         """
         Returns the full text of the transcription
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        text: str
-            the full text of the transcription
         """
         return self._text
+    
+    @property
+    def characters(self) -> list[Character]:
+        """
+        Returns a list of characters from the text. The characters are represented as
+        Character objects. The list is ordered by the start time of the characters.
+        """
+        chars = []
+        for char_info in self.get_char_info():
+            chars.append(Character(
+                start_time=char_info["startTime"],
+                end_time=char_info["endTime"],
+                word_index=char_info["wordIdx"],
+                sentence_index=char_info["sentenceIdx"],
+                text=char_info["char"]
+            ))
+        return chars
+
+    @property
+    def words(self) -> list[Word]:
+        """
+        Returns a list words from the text. The words are represented as Word objects.
+        The lis is ordered by the start time of the words.
+        """
+        words = []
+        for word_info in self.get_word_info():
+            words.append(Word(
+                start_time=word_info["startTime"],
+                end_time=word_info["endTime"],
+                start_char=word_info["startChar"],
+                end_char=word_info["endChar"],
+                text=word_info["word"],
+            ))
+        return words
+
+    @property
+    def sentences(self) -> list[Sentence]:
+        """
+        Returns a list of sentences from the text. The sentences are represented as
+        Sentence objects. The list is ordered by the start time of the sentences.
+        """
+        sentences = []
+        for sentence_info in self.get_sentence_info():
+            sentences.append(Sentence(
+                start_time=sentence_info["startTime"],
+                end_time=sentence_info["endTime"],
+                start_char=sentence_info["startChar"],
+                end_char=sentence_info["endChar"],
+            ))
+        return sentences
 
     def get_char_info(
         self,
@@ -383,64 +347,8 @@ class Transcription:
         return self._find_index(
             self.get_sentence_info(), target_time, type_of_time
         )
-
-    def _find_index(
-        self, transcript_info: list[dict], target_time: float, type_of_time: str
-    ) -> int:
-        """
-        Finds the index in some transcript info who's start or end time is closest to
-        'target_time' (seconds).
-
-        Parameters
-        ----------
-        transcript_info: list[dict]
-            list of dictionaries where each dictionary contains info about a single
-            character, word, or sentence in the text
-        target_time: float
-            The time in seconds to search for.
-        type_of_time: str
-            A string that specifies the type of time we're searching for.
-            If 'start', the function returns the index with the closest start time
-            before 'target_time'.
-            If 'end', the function returns the index with the closest end time after
-            target time.
-
-        Returns
-        -------
-        int
-            The index that is closest to 'target_time'
-        """
-        transcript_start = self.start_time
-        transcript_end = self.end_time
-        if (transcript_start <= target_time <= transcript_end) is False:
-            err = (
-                "target_time '{}' seconds is not within the range of the transcript "
-                "times: {} - {}".format(
-                    target_time, self.start_time, self.end_time
-                )
-            )
-            logging.error(err)
-            raise WhisperXTranscriptionError(err)
-
-        left, right = 0, len(transcript_info) - 1
-        while left <= right:
-            mid = left + (right - left) // 2
-            start_time = transcript_info[mid]["startTime"]
-            end_time = transcript_info[mid]["endTime"]
-
-            if start_time <= target_time <= end_time:
-                return mid
-            elif target_time > end_time:
-                left = mid + 1
-            elif target_time < start_time:
-                right = mid - 1
-
-        if type_of_time == "start":
-            return left - 1 if left == len(transcript_info) else left
-        else:
-            return right + 1 if right == -1 else right
-
-    def store_as_json_file(self, file_path: str) -> JsonFile:
+    
+    def store_as_json_file(self, file_path: str) -> JSONFile:
         """
         Stores the transcription as a json file. 'file_path' is overwritten if already
         exists.
@@ -452,9 +360,9 @@ class Transcription:
 
         Returns
         -------
-        None
+        JSONFile
         """
-        json_file = JsonFile(file_path)
+        json_file = JSONFile(file_path)
         json_file.assert_has_file_extension("json")
         self._fs_manager.assert_parent_dir_exists(json_file)
 
@@ -475,7 +383,7 @@ class Transcription:
 
         transcription_dict = {
             "sourceSoftware": self._source_software,
-            "timeCreated": str(self._time_created),
+            "timeCreated": str(self._created_time),
             "language": self._language,
             "numSpeakers": self._num_speakers,
             "charInfo": char_info_needed_for_storage,
@@ -483,91 +391,6 @@ class Transcription:
 
         json_file.create(transcription_dict)
         return json_file
-
-    def store_as_srt_file(
-        self,
-        file_path: str,
-        start_time: float = None,
-        end_time: float = None,
-    ) -> SrtFile:
-        """
-        Stores the transcription as a srt file. Overwrites 'file_path' if already
-        exists.
-
-        Parameters
-        ----------
-        file_path: str
-            absolute file path to store the transcription as a srt file
-        start_time: float
-            start time of the transcript in seconds
-        end_time: float
-            end time of the transcript in seconds
-
-        Returns
-        -------
-        File
-            the srt file
-        """
-        # check valid file path
-        srt_file = SrtFile(file_path)
-        srt_file.assert_has_file_extension("srt")
-        self._fs_manager.assert_parent_dir_exists(srt_file)
-
-        # delete old file if it exists to write new one
-        srt_file.delete()
-
-        # build subtitles
-        word_info = self.get_word_info(start_time, end_time)
-        subtitles = self._build_subtitles(word_info, max_subtitle_length=32)
-
-        # create srt file
-        srt_file.create(subtitles)
-        srt_file.assert_exists()
-        logging.debug("srt file created at {}".format(srt_file.get_path()))
-        return srt_file
-
-    def store_as_pdf_file(
-        self,
-        file_path: str,
-        start_time: float = None,
-        end_time: float = None,
-    ) -> PdfFile:
-        """
-        Stores the transcription as a pdf file. Overwrites 'file_path' if already
-        exists.
-
-        Parameters
-        ----------
-        file_path: str
-            absolute file path to store the transcription as a PDF file.
-        start_time: float
-            start time of the transcript to store as a pdf file in seconds
-        end_time: float
-            start time of the transcript to store as a pdf file in seconds
-
-        Returns
-        -------
-        PdfFile
-            the pdf file containing the transcript
-        """
-        pdf_file = PdfFile(file_path)
-        pdf_file.assert_has_file_extension("pdf")
-        self._fs_manager.assert_parent_dir_exists(pdf_file)
-
-        # delete old file to write new one
-        pdf_file.delete()
-
-        # build paragraphs
-        sentence_info = self.get_sentence_info(start_time, end_time)
-        sentences = [sent["sentence"] for sent in sentence_info]
-        num_sentences_per_paragraph = 5
-        paragraphs = []
-        for i in range(0, len(sentences), num_sentences_per_paragraph):
-            paragraphs.append(" ".join(sentences[i : i + num_sentences_per_paragraph]))
-
-        pdf_file.create(paragraphs)
-        pdf_file.assert_exists()
-        return pdf_file
 
     def print_char_info(self) -> None:
         """
@@ -638,21 +461,79 @@ class Transcription:
             print("endChar: {}".format(sentence_info["endChar"]))
             print("startTime: {}".format(sentence_info["startTime"]), end=" | ")
             print("endTime: {}\n".format(sentence_info["endTime"]))
+    
+    def _find_index(
+        self, transcript_info: list[dict], target_time: float, type_of_time: str
+    ) -> int:
+        """
+        Finds the index in some transcript info who's start or end time is closest to
+        'target_time' (seconds).
 
-    def _init_from_json_file(self, json_file: JsonFile) -> None:
+        Parameters
+        ----------
+        transcript_info: list[dict]
+            list of dictionaries where each dictionary contains info about a single
+            character, word, or sentence in the text
+        target_time: float
+            The time in seconds to search for.
+        type_of_time: str
+            A string that specifies the type of time we're searching for.
+            If 'start', the function returns the index with the closest start time
+            before 'target_time'.
+            If 'end', the function returns the index with the closest end time after
+            target time.
+
+        Returns
+        -------
+        int
+            The index that is closest to 'target_time'
+        """
+        transcript_start = self.start_time
+        transcript_end = self.end_time
+        if (transcript_start <= target_time <= transcript_end) is False:
+            err = (
+                "target_time '{}' seconds is not within the range of the transcript "
+                "times: {} - {}".format(
+                    target_time, self.start_time, self.end_time
+                )
+            )
+            logging.error(err)
+            raise TranscriptionError(err)
+
+        left, right = 0, len(transcript_info) - 1
+        while left <= right:
+            mid = left + (right - left) // 2
+            start_time = transcript_info[mid]["startTime"]
+            end_time = transcript_info[mid]["endTime"]
+
+            if start_time <= target_time <= end_time:
+                return mid
+            elif target_time > end_time:
+                left = mid + 1
+            elif target_time < start_time:
+                right = mid - 1
+
+        if type_of_time == "start":
+            return left - 1 if left == len(transcript_info) else left
+        else:
+            return right + 1 if right == -1 else right
+
+
+    
+    def _init_from_json_file(self, json_file: JSONFile) -> None:
         """
         Initializes the transcription object from an existing json file
 
         Parameters
         ----------
-        json_file: JsonFile
+        json_file: JSONFile
             a json file with whisperx transcription data
 
         Returns
         -------
         None
         """
-        self._type_checker.assert_type(json_file, "json_file", JsonFile)
+        self._type_checker.assert_type(json_file, "json_file", JSONFile)
         json_file.assert_exists()
         transcription_data = json_file.read()
         self._init_from_dict(transcription_data)
@@ -683,7 +564,7 @@ class Transcription:
                 transcription["timeCreated"], "%Y-%m-%d %H:%M:%S.%f"
             )
 
-        self._time_created = transcription["timeCreated"]
+        self._created_time = transcription["timeCreated"]
         self._source_software = transcription["sourceSoftware"]
         self._language = transcription["language"]
         self._num_speakers = transcription["numSpeakers"]
@@ -1031,84 +912,7 @@ class Transcription:
             "Realigning char_idx '{}' with the correct starting character '{}' for the "
             "sentence failed.".format(char_idx, correct_char)
         )
-        raise WhisperXTranscriptionError(err_msg)
-
-    def _build_subtitles(self, word_info: list, max_subtitle_length: int) -> list:
-        """
-        Constructs subtitles from word-level information considering a maximum line
-        length.
-
-        Groups words together to form subtitle lines, each with start and end times,
-        without exceeding the specified maximum line length. The resulting structure is:
-            [
-                {
-                    'text': str,         # Subtitle text
-                    'startTime': float,  # Start time of the subtitle
-                    'endTime': float,    # End time of the subtitle
-                },
-            ]
-
-        Parameters
-        ----------
-        word_info: list[dict]
-            A list of dictionaries where each dictionary contains info about a single
-            word in the transcript. Data structure is as follows:
-                [
-                    {
-                        'word': str,
-                        'startTime': float,
-                        'endTime': float,
-                        'startChar': int,
-                        'endChar': int,
-                        'speaker': str,
-                    },
-                ]
-
-        max_subtitle_length: int
-            The maximum allowed characters in a single subtitle line.
-
-        Returns
-        -------
-        list
-            A list of dictionaries containing the subtitles.
-        """
-        subtitle = ""
-        subtitles = []
-        start_time = word_info[0]["startTime"]
-
-        for i, word_info_data in enumerate(word_info):
-            word = word_info_data["word"]
-            subtitle_length = len(subtitle) + len(word)
-
-            # start new line
-            if subtitle_length > max_subtitle_length:
-                end_time = word_info[i - 1]["endTime"]
-                subtitles.append(
-                    {
-                        "text": subtitle.strip(),
-                        "startTime": start_time,
-                        "endTime": end_time,
-                    }
-                )
-
-                subtitle = word + " "
-                start_time = word_info_data["startTime"]
-            # add word to current line
-            else:
-                subtitle += word + " "
-
-        # final word
-        subtitle += word
-        end_time = word_info_data["endTime"]
-        subtitles.append(
-            {
-                "text": subtitle.strip(),
-                "startTime": start_time,
-                "endTime": end_time,
-            }
-        )
-
-        return subtitles
+        raise TranscriptionError(err_msg)
 
     def _assert_valid_times(self, start_time: float, end_time: float) -> None:
         """
@@ -1132,7 +936,7 @@ class Transcription:
                 "'{}' (start_time) and '{}' (end_time)".format(start_time, end_time)
             )
             logging.error(err)
-            raise WhisperXTranscriptionError(err)
+            raise TranscriptionError(err)
 
         if start_time is None and end_time is None:
             return
@@ -1141,7 +945,7 @@ class Transcription:
         if start_time < 0:
             err = "start_time must be greater than or equal to 0."
             logging.error(err)
-            raise WhisperXTranscriptionError(err)
+            raise TranscriptionError(err)
 
         # end time can't exceed transcription end time
         if end_time > self.end_time:
@@ -1152,7 +956,7 @@ class Transcription:
                 )
             )
             logging.error(err)
-            raise WhisperXTranscriptionError(err)
+            raise TranscriptionError(err)
 
         # start time must be less than end time
         if start_time >= end_time:
@@ -1161,7 +965,7 @@ class Transcription:
                 "".format(start_time, end_time)
             )
             logging.error(err)
-            raise WhisperXTranscriptionError(err)
+            raise TranscriptionError(err)
 
     def __str__(self) -> str:
         """
@@ -1182,27 +986,3 @@ class Transcription:
             )
         )
         return transcription
-
-    def get_info(self) -> str:
-        """
-        Returns a string containing the transcription information, namely
-        sourceSoftware, timeCreated, and the language the transcript is in.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        str
-            string containing the transcription information
-        """
-        info = (
-            "sourceSoftware: {}\ntimeCreated: {}\nlanguage: {}\n"
-            "".format(
-                self.source_software,
-                self.time_created,
-                self.language,
-            )
-        )
-        return info

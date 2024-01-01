@@ -11,5 +11,5 @@ class NoSpeechError(WhisperXTranscriberConfigError):
     pass
 
 
-class WhisperXTranscriptionError(NoSpeechError):
+class TranscriptionError(NoSpeechError):
     pass

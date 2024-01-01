@@ -34,6 +34,8 @@ setup(
         'pytest-mock',
         'psutil',
         'pandas'
+        'onnxruntime',
+        'sentence-transformers',
     ],
     zip_safe=False
 )

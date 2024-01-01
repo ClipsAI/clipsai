@@ -5,15 +5,13 @@ from datetime import datetime
 from clipsai.media.editor import MediaEditor
 from clipsai.media.audio_file import AudioFile
 from clipsai.media.audiovideo_file import AudioVideoFile
-from clipsai.filesys.json_file import JsonFile
-from clipsai.filesys.srt_file import SrtFile
-from clipsai.filesys.pdf_file import PdfFile
+from clipsai.filesys.json_file import JSONFile
 from clipsai.exceptions import InvalidInputDataError
-from clipsai.transcribe.exceptions import WhisperXTranscriptionError
+from clipsai.transcribe.exceptions import TranscriptionError
 from clipsai.media.exceptions import MediaEditorError
 from clipsai.transcribe.transcribe_input_validator import TranscribeInputValidator
 from clipsai.transcribe.transcribe import transcribe
-from clipsai.transcribe.whisperx_transcription import WhisperXTranscription
+from clipsai.transcribe.transcription import Transcription
 
 
 @pytest.fixture
@@ -139,7 +137,7 @@ def test_transcribe_exception_handling(mock_media_editor, mock_whisperx_transcri
     assert result["state"] == "failed"
 
 
-# Testing WhisperXTranscription
+# Testing Transcription
 valid_transcription_data = {
     "sourceSoftware": "TestSoftware",
     "timeSpawned": datetime.now(),
@@ -152,51 +150,51 @@ valid_transcription_data = {
 
 
 def test_init_with_valid_dict():
-    transcription = WhisperXTranscription(valid_transcription_data)
+    transcription = Transcription(valid_transcription_data)
     assert transcription.get_language() == "en"
 
 
 def test_init_with_valid_json_file():
-    transcription = WhisperXTranscription(valid_transcription_data)
-    assert isinstance(transcription, WhisperXTranscription)
+    transcription = Transcription(valid_transcription_data)
+    assert isinstance(transcription, Transcription)
 
 
 def test_init_with_invalid_data():
     with pytest.raises(TypeError):
-        WhisperXTranscription("invalid_data")
+        Transcription("invalid_data")
 
 
 def test_get_source_software():
-    transcription = WhisperXTranscription(valid_transcription_data)
+    transcription = Transcription(valid_transcription_data)
     assert transcription.get_source_software() == "TestSoftware"
 
 
 def test_get_time_spawned():
-    transcription = WhisperXTranscription(valid_transcription_data)
+    transcription = Transcription(valid_transcription_data)
     assert isinstance(transcription.get_time_spawned(), datetime)
 
 
 def test_get_char_info_with_time_filter():
-    transcription = WhisperXTranscription(valid_transcription_data)
+    transcription = Transcription(valid_transcription_data)
     char_info = transcription.get_char_info(start_time=0.0, end_time=0.2)
     assert len(char_info) > 0
 
 
 def test_find_char_index():
-    transcription = WhisperXTranscription(valid_transcription_data)
+    transcription = Transcription(valid_transcription_data)
     index = transcription.find_char_index(0.1, "start")
     assert index >= 0
 
 
 def test_store_as_json_file():
-    mock_json_file = JsonFile("path/to/output.json")
-    transcription = WhisperXTranscription(valid_transcription_data)
+    mock_json_file = JSONFile("path/to/output.json")
+    transcription = Transcription(valid_transcription_data)
 
-    with patch('filesys.json_file.JsonFile.assert_has_file_extension'), \
+    with patch('filesys.json_file.JSONFile.assert_has_file_extension'), \
          patch('filesys.manager.FileSystemManager.assert_parent_dir_exists'), \
-         patch('filesys.json_file.JsonFile.delete'), \
-         patch('filesys.json_file.JsonFile.create', return_value=mock_json_file), \
-         patch('filesys.json_file.JsonFile.assert_exists'):
+         patch('filesys.json_file.JSONFile.delete'), \
+         patch('filesys.json_file.JSONFile.create', return_value=mock_json_file), \
+         patch('filesys.json_file.JSONFile.assert_exists'):
 
         json_file = transcription.store_as_json_file("path/to/output.json")
 
@@ -205,44 +203,7 @@ def test_store_as_json_file():
 
         assert json_file_class_name == mock_json_file_class_name
 
-
-def test_store_as_srt_file():
-    mock_srt_file = SrtFile("path/to/output.srt")
-    transcription = WhisperXTranscription(valid_transcription_data)
-
-    with patch('filesys.srt_file.SrtFile.assert_has_file_extension'), \
-         patch('filesys.manager.FileSystemManager.assert_parent_dir_exists'), \
-         patch('filesys.srt_file.SrtFile.delete'), \
-         patch('filesys.srt_file.SrtFile.create', return_value=mock_srt_file), \
-         patch('filesys.srt_file.SrtFile.assert_exists'):
-
-        srt_file = transcription.store_as_srt_file("path/to/output.srt")
-
-        srt_file_class_name = srt_file.__class__.__name__
-        mock_srt_file_class_name = mock_srt_file.__class__.__name__
-
-        assert srt_file_class_name == mock_srt_file_class_name
-
-
-def test_store_as_pdf_file():
-    mock_pdf_file = PdfFile("path/to/output.pdf")
-    transcription = WhisperXTranscription(valid_transcription_data)
-
-    with patch('filesys.pdf_file.PdfFile.assert_has_file_extension'), \
-         patch('filesys.manager.FileSystemManager.assert_parent_dir_exists'), \
-         patch('filesys.pdf_file.PdfFile.delete'), \
-         patch('filesys.pdf_file.PdfFile.create', return_value=mock_pdf_file), \
-         patch('filesys.pdf_file.PdfFile.assert_exists'):
-
-        pdf_file = transcription.store_as_pdf_file("path/to/output.pdf")
-
-        pdf_file_class_name = pdf_file.__class__.__name__
-        mock_pdf_file_class_name = mock_pdf_file.__class__.__name__
-
-        assert pdf_file_class_name == mock_pdf_file_class_name
-
-
 def test_invalid_times_exception():
-    transcription = WhisperXTranscription(valid_transcription_data)
-    with pytest.raises(WhisperXTranscriptionError):
+    transcription = Transcription(valid_transcription_data)
+    with pytest.raises(TranscriptionError):
         transcription.get_char_info(start_time=-1, end_time=5)
