@@ -60,7 +60,6 @@ def clip(
         contains a start_time, end_time, start_char, and end_char,
         corresponding to the transcript.
     """
-    exception_handler = ExceptionHandler()
     input_data = validate_input_data(
         min_clip_duration,
         max_clip_duration,
@@ -69,57 +68,37 @@ def clip(
         window_compare_pool_method,
         embedding_aggregation_pool_method,
         device,
-        exception_handler,
     )
 
     # run the clip process
-    try:
-        logging.debug("FINDING ASSET CLIPS")
-        clip_finder = TextTileClipFinder(
-            device=input_data["computeDevice"],
-            min_clip_duration_secs=input_data["minClipTime"],
-            max_clip_duration_secs=input_data["maxClipTime"],
-            cutoff_policy=input_data["cutoffPolicy"],
-            embedding_aggregation_pool_method=input_data[
-                "embeddingAggregationPoolMethod"
-            ],
-            smoothing_width=input_data["smoothingWidth"],
-            window_compare_pool_method=input_data["windowComparePoolMethod"],
-            save_results=False,
+    logging.debug("FINDING ASSET CLIPS")
+    clip_finder = TextTileClipFinder(
+        device=input_data["computeDevice"],
+        min_clip_duration_secs=input_data["minClipTime"],
+        max_clip_duration_secs=input_data["maxClipTime"],
+        cutoff_policy=input_data["cutoffPolicy"],
+        embedding_aggregation_pool_method=input_data[
+            "embeddingAggregationPoolMethod"
+        ],
+        smoothing_width=input_data["smoothingWidth"],
+        window_compare_pool_method=input_data["windowComparePoolMethod"],
+        save_results=False,
+    )
+    clip_infos = clip_finder.find_clips(transcription)
+    logging.debug("POPULATING LIST OF CLIPS")
+    clips = []
+    for clip_info in clip_infos:
+        clip = Clip(
+            clip_info["startTime"],
+            clip_info["endTime"],
+            clip_info["startChar"],
+            clip_info["endChar"]
         )
-        clip_infos = clip_finder.find_clips(transcription)
-        logging.debug("POPULATING LIST OF CLIPS")
-        clips = []
-        for clip_info in clip_infos:
-            clip = Clip(
-                clip_info["startTime"],
-                clip_info["endTime"],
-                clip_info["startChar"],
-                clip_info["endChar"]
-            )
-            clips.append(clip)
+        clips.append(clip)
 
-        logging.debug("FINISHED CLIPPING MEDIA FILE")
-        return clips
+    logging.debug("FINISHED CLIPPING MEDIA FILE")
+    return clips
 
-    except Exception as e:
-        status_code = exception_handler.get_status_code(e)
-        err_msg = str(e)
-        stack_trace = exception_handler.get_stack_trace_info()
-
-        # define failure information
-        error_info = {
-            "success": False,
-            "status": status_code,
-            "message": err_msg,
-            "stackTraceInfo": stack_trace,
-            "data": input_data,
-        }
-        logging.error("ERROR INFO FOR FAILED REQUESTR: {}".format(error_info))
-        logging.error("DATA FOR FAILED REQUEST: {}".format(input_data))
-
-        return error_info
-    
 def validate_input_data(
     min_clip_duration: float,
     max_clip_duration: float,
@@ -128,7 +107,6 @@ def validate_input_data(
     window_compare_pool_method: str,
     embedding_aggregation_pool_method: str,
     device: str,
-    exception_handler: ExceptionHandler,
 ) -> dict:
     """
     Validates the paramters for the clip function.
@@ -158,31 +136,16 @@ def validate_input_data(
         The device to use when clipping on. Ex: 'cpu', 'cuda'
 
     """
-    try:
-        clip_input_validator = ClipInputValidator()
-        temp_data = {
-            "computeDevice": device,
-            "cutoffPolicy": cutoff_policy,
-            "embeddingAggregationPoolMethod": embedding_aggregation_pool_method,
-            "minClipTime": min_clip_duration,
-            "maxClipTime": max_clip_duration,
-            "smoothingWidth": smoothing_width,
-            "windowComparePoolMethod": window_compare_pool_method,
-        }
-        input_data = clip_input_validator.impute_input_data_defaults(temp_data)
-        clip_input_validator.assert_valid_input_data(input_data)
-        return input_data, 
-    except Exception as e:
-        status_code = exception_handler.get_status_code(e)
-        err_msg = str(e)
-        stack_trace = exception_handler.get_stack_trace_info()
-
-        error_info = {
-            "success": False,
-            "status": status_code,
-            "message": err_msg,
-            "stackTraceInfo": stack_trace,
-            "data": input_data,
-        }
-        logging.error(error_info)
-        return error_info
+    clip_input_validator = ClipInputValidator()
+    temp_data = {
+        "computeDevice": device,
+        "cutoffPolicy": cutoff_policy,
+        "embeddingAggregationPoolMethod": embedding_aggregation_pool_method,
+        "minClipTime": min_clip_duration,
+        "maxClipTime": max_clip_duration,
+        "smoothingWidth": smoothing_width,
+        "windowComparePoolMethod": window_compare_pool_method,
+    }
+    input_data = clip_input_validator.impute_input_data_defaults(temp_data)
+    clip_input_validator.assert_valid_input_data(input_data)
+    return input_data 

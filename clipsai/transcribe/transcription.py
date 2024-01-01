@@ -797,7 +797,7 @@ class Transcription:
         None
         """
         char_info = self.get_char_info()
-        sentences = sent_tokenize(self.get_text())
+        sentences = sent_tokenize(self.text)
 
         # final destination for sentence_info
         sentence_info = []

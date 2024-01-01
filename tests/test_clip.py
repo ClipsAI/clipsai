@@ -86,15 +86,13 @@ def test_texttile_config_manager_invalid_config(texttile_config_manager):
 # Testing clip function
 def test_clip_with_valid_input(valid_transcription, mock_texttile_clip_finder):
     mock_clip_finder = mock_texttile_clip_finder.return_value
-    mock_clip_finder.find_clips.return_value = [{"startTime": 100, "endTime": 200}]
-    result = clip(valid_transcription, device="cpu", min_clip_time=15, max_clip_time=900)
-    print(type(result))
+    mock_clip = {"startTime": 100, "endTime": 200, "startChar": 0, "endChar": 10}
+    mock_clip_finder.find_clips.return_value = [mock_clip]
+    result = clip(
+        transcription=valid_transcription,
+        min_clip_duration=15,
+        max_clip_duration=900,
+        device="cpu"
+    )
+
     assert isinstance(result, list)
-
-
-def test_clip_with_invalid_input(valid_transcription, mock_texttile_clip_finder):
-    mock_clip_finder = mock_texttile_clip_finder.return_value
-    mock_clip_finder.find_clips.side_effect = Exception("Invalid input")
-    result = clip(valid_transcription, device="unknown_device", min_clip_time=-5, max_clip_time=5)
-    print(result)
-    assert result["success"] is False

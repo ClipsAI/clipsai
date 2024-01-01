@@ -113,12 +113,16 @@ def test_transcribe_successful(mock_media_editor, mock_whisperx_transcriber):
         'language': 'en',
         'numSpeakers': 1,
         'sourceSoftware': 'whisperx',
-        'timeSpawned': '2023-01-01T00:00:00'
+        'timeCreated': '2023-01-01T00:00:00'
     }
     mock_transcriber_instance = mock_whisperx_transcriber.return_value
     mock_transcriber_instance.transcribe.return_value = MagicMock(**mock_transcription)
 
-    result = transcribe("path/to/media.mp3", "en", "cpu")
+    result = transcribe(
+        media_file_path="path/to/media.mp3",
+        language_code="en",
+        device="cpu"
+    )
 
     assert isinstance(result, MagicMock)
 
@@ -140,7 +144,7 @@ def test_transcribe_exception_handling(mock_media_editor, mock_whisperx_transcri
 # Testing Transcription
 valid_transcription_data = {
     "sourceSoftware": "TestSoftware",
-    "timeSpawned": datetime.now(),
+    "timeCreated": datetime.now(),
     "language": "en",
     "numSpeakers": 2,
     "charInfo": [
@@ -151,7 +155,7 @@ valid_transcription_data = {
 
 def test_init_with_valid_dict():
     transcription = Transcription(valid_transcription_data)
-    assert transcription.get_language() == "en"
+    assert transcription.language == "en"
 
 
 def test_init_with_valid_json_file():
@@ -166,12 +170,12 @@ def test_init_with_invalid_data():
 
 def test_get_source_software():
     transcription = Transcription(valid_transcription_data)
-    assert transcription.get_source_software() == "TestSoftware"
+    assert transcription.source_software == "TestSoftware"
 
 
 def test_get_time_spawned():
     transcription = Transcription(valid_transcription_data)
-    assert isinstance(transcription.get_time_spawned(), datetime)
+    assert isinstance(transcription.created_time, datetime)
 
 
 def test_get_char_info_with_time_filter():
