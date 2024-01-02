@@ -196,6 +196,8 @@ Dockerfile
 *.log
 
 # Local Data
+data/
+sandbox/
 clipsai/data
 
 # Ignore macOS system files
