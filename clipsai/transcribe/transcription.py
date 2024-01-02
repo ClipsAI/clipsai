@@ -979,10 +979,4 @@ class Transcription:
         -------
         None
         """
-        transcription = (
-            "{}\n"
-            "".format(
-                self.text()
-            )
-        )
-        return transcription
+        return self.text

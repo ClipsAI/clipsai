@@ -174,7 +174,16 @@ class FaceNetMediaPipeResizer:
             unmerge_segments_length - len(segments)
         ))
 
-        crop_segments = [Segment(**segment) for segment in segments]
+        crop_segments = []
+        for segment in segments:
+            crop_segments.append(Segment(
+                speakers=segment["speakers"],
+                start_time=segment["startTime"],
+                end_time=segment["endTime"],
+                x=segment["x"],
+                y=segment["y"]
+            ))
+        
         crops = Crops(
             original_width=video_file.get_width_pixels(),
             original_height=video_file.get_height_pixels(),

@@ -35,7 +35,8 @@ setup(
         'psutil',
         'pandas'
         'onnxruntime',
-        'sentence-transformers',
+        'scikit-learn',
+        
     ],
     zip_safe=False
 )

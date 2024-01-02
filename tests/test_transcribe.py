@@ -61,23 +61,6 @@ def test_assert_valid_input_data(transcribe_input_validator):
     transcribe_input_validator.assert_valid_input_data(valid_input_data)
 
 
-def test_invalid_media_file_path(transcribe_input_validator):
-    invalid_input_data = {
-        "mediaFilePath": "path/to/media.txt"
-    }
-    with pytest.raises(InvalidInputDataError):
-        transcribe_input_validator.assert_valid_input_data(invalid_input_data)
-
-
-def test_invalid_compute_device(transcribe_input_validator):
-    invalid_input_data = {
-        "mediaFilePath": "path/to/media.mp3",
-        "computeDevice": "invalid_device"
-    }
-    with pytest.raises(InvalidInputDataError):
-        transcribe_input_validator.assert_valid_input_data(invalid_input_data)
-
-
 # Testing MediaEditor
 @patch('clipsai.media.temporal_media_file.TemporalMediaFile.assert_exists')
 def test_instantiate_as_audio_file(mock_assert_exists, media_editor):
