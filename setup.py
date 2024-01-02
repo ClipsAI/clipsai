@@ -18,7 +18,7 @@ setup(
         'nltk',
         'python-magic',
         'reportlab',
-        'whisperx@git+https://github.com/m-bain/whisperx.git',
+        'git+https://github.com/m-bain/whisperx.git',
         'sentence-transformers',
         'matplotlib',
         'av',
