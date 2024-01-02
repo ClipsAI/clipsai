@@ -5,7 +5,7 @@ setup(
     version='0.1',
     description='Clips AI is an open-source Python library that automatically converts long videos into clips',
     url='https://docs.clipsai.com/',
-    author='ClipsAI',
+    author='Clips AI',
     author_email='support@clipsai.com',
     license='MIT',
     packages=find_packages(),
@@ -35,7 +35,6 @@ setup(
         'pandas'
         'onnxruntime',
         'scikit-learn',
-        
     ],
     zip_safe=False
 )
