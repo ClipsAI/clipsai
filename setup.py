@@ -1,15 +1,14 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='clipsai',
     version='0.1',
-    description='A Python package for clipping video content',
-    url='https://github.com/ClipsAI/clip',
+    description='Clips AI is an open-source Python library that automatically converts long videos into clips',
+    url='https://docs.clipsai.com/',
     author='ClipsAI',
     author_email='support@clipsai.com',
     license='MIT',
-    packages=['clipsai'],
-    # we need to go through pyproject.toml and determine what dependencies we need
+    packages=find_packages(),
     install_requires=[
         'numpy',
         'opencv-python',
