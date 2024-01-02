@@ -23,6 +23,10 @@ For full documentation, visit [Clips AI Documentation](https://docs.clipsai.com/
 pip install clipsai
 ```
 
+```bash
+pip install whisperx@git+https://github.com/m-bain/whisperx.git
+```
+
 ## Creating clips
 
 Clips are created based on the transcript of a video. You'll first need to transcribe

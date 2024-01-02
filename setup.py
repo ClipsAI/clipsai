@@ -17,8 +17,6 @@ setup(
         'torch',
         'nltk',
         'python-magic',
-        'reportlab',
-        'git+https://github.com/m-bain/whisperx.git',
         'sentence-transformers',
         'matplotlib',
         'av',
