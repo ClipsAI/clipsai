@@ -50,7 +50,7 @@ class PyannoteDiarizer:
         assert_compute_device_available(device)
 
         self.pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.0",
+            "pyannote/speaker-diarization-3.1",
             use_auth_token=auth_token,
         ).to(torch.device(device))
         logging.debug("Pyannote using device: {}".format(self.pipeline.device))
@@ -85,7 +85,12 @@ class PyannoteDiarizer:
                 end time of the segment in seconds
         """
 
-        pyannote_segments: Annotation = self.pipeline({"audio": audio_file.path})
+        wav_file = audio_file.extract_audio(
+            extracted_audio_file_path=audio_file.convert_to_wav_path(),
+            audio_codec="pcm_s16le",
+        )
+
+        pyannote_segments: Annotation = self.pipeline({"audio": wav_file.path})
 
         adjusted_speaker_segments = self._adjust_segments(
             pyannote_segments=pyannote_segments,
@@ -93,6 +98,8 @@ class PyannoteDiarizer:
             duration=audio_file.get_duration(),
             time_precision=time_precision,
         )
+
+        wav_file.delete()
 
         return adjusted_speaker_segments
 
@@ -268,3 +275,5 @@ class PyannoteDiarizer:
         self.pipeline = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    
