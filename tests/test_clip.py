@@ -4,7 +4,6 @@ from clipsai.clip.clip import clip
 from clipsai.clip.clip_input_validator import ClipInputValidator
 from clipsai.clip.texttile_config_manager import TextTileClipFinderConfigManager
 from clipsai.transcribe.transcription import Transcription
-from clipsai.clip.clip_model import Clip
 
 
 @pytest.fixture
