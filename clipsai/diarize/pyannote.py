@@ -18,8 +18,8 @@ use that as the number of speakers to detect.
 import logging
 
 # local package imports
-from media.audio_file import AudioFile
-from utils.pytorch import get_compute_device, assert_compute_device_available
+from ..media.audio_file import AudioFile
+from ..utils.pytorch import get_compute_device, assert_compute_device_available
 
 # third party imports
 from pyannote.audio import Pipeline

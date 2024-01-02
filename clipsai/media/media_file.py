@@ -12,9 +12,9 @@ import os
 from .exceptions import NoAudioStreamError, NoVideoStreamError
 
 # local imports
-from filesys.dir import Dir
-from filesys.file import File
-from filesys.manager import FileSystemManager
+from ..filesys.dir import Dir
+from ..filesys.file import File
+from ..filesys.manager import FileSystemManager
 
 
 SUCCESS = 0

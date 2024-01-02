@@ -8,8 +8,8 @@ import abc
 from exceptions import InvalidInputDataError
 
 # local package imports
-from utils.utils import find_missing_dict_keys
-from utils.type_checker import TypeChecker
+from .utils.utils import find_missing_dict_keys
+from .utils.type_checker import TypeChecker
 
 
 class InputValidator:

@@ -15,7 +15,7 @@ import subprocess
 from .temporal_media_file import TemporalMediaFile
 
 # local package imports
-from filesys.file import File
+from ..filesys.file import File
 
 SUCCESS = 0
 

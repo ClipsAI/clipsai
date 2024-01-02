@@ -11,8 +11,8 @@ from .transcription import Transcription
 from .transcribe_input_validator import TranscribeInputValidator
 
 # local package imports
-from utils.exception_handler import ExceptionHandler
-from media.editor import MediaEditor
+from ..utils.exception_handler import ExceptionHandler
+from ..media.editor import MediaEditor
 
 
 def transcribe(

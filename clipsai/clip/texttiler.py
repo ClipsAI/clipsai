@@ -18,9 +18,9 @@ from .exceptions import TextTilerError
 from .clip_config_manager import TextTilerConfigManager
 
 # local package imports
-from filesys.dir import Dir
-from filesys.manager import FileSystemManager
-from utils.pytorch import (
+from ..filesys.dir import Dir
+from ..filesys.manager import FileSystemManager
+from ..utils.pytorch import (
     max_magnitude_2d,
     get_compute_device,
     assert_compute_device_available,

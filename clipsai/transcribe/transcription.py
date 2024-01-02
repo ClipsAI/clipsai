@@ -17,9 +17,9 @@ from .exceptions import TranscriptionError
 from .transcription_element import Sentence, Word, Character
 
 # local imports
-from filesys.json_file import JSONFile
-from filesys.manager import FileSystemManager
-from utils.type_checker import TypeChecker
+from ..filesys.json_file import JSONFile
+from ..filesys.manager import FileSystemManager
+from ..utils.type_checker import TypeChecker
 
 # 3rd party imports
 import nltk

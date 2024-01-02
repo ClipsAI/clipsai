@@ -9,7 +9,7 @@ import logging
 from .exceptions import ImageProcessingError
 
 # local imports
-from media.video_file import VideoFile
+from ..media.video_file import VideoFile
 
 # third party imports
 import av

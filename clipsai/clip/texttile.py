@@ -11,8 +11,8 @@ from .roberta import RobertaTextEmbedder
 from .texttiler import TextTiler
 
 # local package imports
-from transcribe.transcription import Transcription
-from utils.pytorch import get_compute_device, assert_compute_device_available
+from ..transcribe.transcription import Transcription
+from ..utils.pytorch import get_compute_device, assert_compute_device_available
 
 # 3rd party imports
 import torch

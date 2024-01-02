@@ -10,7 +10,7 @@ import os
 from .exceptions import FileSystemObjectError
 
 # local imports
-from utils.type_checker import TypeChecker
+from ..utils.type_checker import TypeChecker
 
 
 class FileSystemObject:

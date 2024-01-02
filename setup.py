@@ -17,7 +17,7 @@ setup(
         'nltk',
         'numpy',
         'opencv-python',
-        'pandas'
+        'pandas',
         'psutil',
         'pyannote.audio',
         'pyannote.core',

@@ -2,7 +2,7 @@
 Utilities for detecting scene changes in a video.
 """
 # current package imports
-from media.video_file import VideoFile
+from ..media.video_file import VideoFile
 
 # third party imports
 from scenedetect import detect, AdaptiveDetector
