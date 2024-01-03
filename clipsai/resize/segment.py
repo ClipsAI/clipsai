@@ -113,6 +113,13 @@ class Segment:
         return f"Segment(speakers: {self._speakers}, start: {self._start_time}, " \
                f"end: {self._end_time}, coordinates: ({self._x}, {self._y}))"
     
+    def __repr__(self) -> str:
+        """
+        Returns a string representation of the CropSegment instance.
+        """
+        return f"Segment(speakers: {self._speakers}, start: {self._start_time}, " \
+               f"end: {self._end_time}, coordinates: ({self._x}, {self._y}))"
+    
     def __eq__(self, __value: object) -> bool:
         """
         Returns True if the CropSegment instance is equal to the given value, False 
