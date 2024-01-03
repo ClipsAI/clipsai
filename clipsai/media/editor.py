@@ -17,9 +17,9 @@ from .temporal_media_file import TemporalMediaFile
 from .video_file import VideoFile
 
 # local imports
-from ..filesys.manager import FileSystemManager
-from ..utils.conversions import seconds_to_hms_time_format
-from ..utils.type_checker import TypeChecker
+from clipsai.filesys.manager import FileSystemManager
+from clipsai.utils.conversions import seconds_to_hms_time_format
+from clipsai.utils.type_checker import TypeChecker
 
 
 # ffmpeg return code of 0 means success; any other (positive) integer means failure

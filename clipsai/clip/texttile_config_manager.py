@@ -5,7 +5,7 @@ Config manager for TextTileClipFinder.
 from .clip_config_manager import TextTilerConfigManager
 
 # local package imports
-from ..utils.utils import find_missing_dict_keys
+from clipsai.utils.utils import find_missing_dict_keys
 
 
 class TextTileClipFinderConfigManager(TextTilerConfigManager):

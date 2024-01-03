@@ -16,10 +16,10 @@ from .rect import Rect
 from .segment import Segment
 
 # local package imports
-from ..media.editor import MediaEditor
-from ..media.video_file import VideoFile
-from ..utils.conversions import bytes_to_gibibytes
-from ..utils import pytorch
+from clipsai.media.editor import MediaEditor
+from clipsai.media.video_file import VideoFile
+from clipsai.utils.conversions import bytes_to_gibibytes
+from clipsai.utils import pytorch
 
 # 3rd party imports
 import cv2

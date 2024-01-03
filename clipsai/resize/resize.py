@@ -10,8 +10,8 @@ from .facenet_mp import FaceNetMediaPipeResizer
 from .detect_scenes import detect_scenes
 
 # local package imports
-from ..diarize.pyannote import PyannoteDiarizer
-from ..media.audiovideo_file import AudioVideoFile
+from clipsai.diarize.pyannote import PyannoteDiarizer
+from clipsai.media.audiovideo_file import AudioVideoFile
 
 
 def resize(

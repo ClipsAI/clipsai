@@ -177,11 +177,11 @@ def test_store_as_json_file():
     mock_json_file = JSONFile("path/to/output.json")
     transcription = Transcription(valid_transcription_data)
 
-    with patch('filesys.json_file.JSONFile.assert_has_file_extension'), \
-         patch('filesys.manager.FileSystemManager.assert_parent_dir_exists'), \
-         patch('filesys.json_file.JSONFile.delete'), \
-         patch('filesys.json_file.JSONFile.create', return_value=mock_json_file), \
-         patch('filesys.json_file.JSONFile.assert_exists'):
+    with patch('clipsai.filesys.json_file.JSONFile.assert_has_file_extension'), \
+         patch('clipsai.filesys.manager.FileSystemManager.assert_parent_dir_exists'), \
+         patch('clipsai.filesys.json_file.JSONFile.delete'), \
+         patch('clipsai.filesys.json_file.JSONFile.create', return_value=mock_json_file), \
+         patch('clipsai.filesys.json_file.JSONFile.assert_exists'):
 
         json_file = transcription.store_as_json_file("path/to/output.json")
 

@@ -10,8 +10,8 @@ from .texttile import TextTileClipFinder
 from .clip_model import Clip
 
 # local package imports
-from ..utils.exception_handler import ExceptionHandler
-from ..transcribe.transcription import Transcription
+from clipsai.utils.exception_handler import ExceptionHandler
+from clipsai.transcribe.transcription import Transcription
 
 
 def clip(

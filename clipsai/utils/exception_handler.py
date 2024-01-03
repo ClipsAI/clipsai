@@ -6,8 +6,8 @@ import sys
 import traceback
 
 # local package imports
-from ..exceptions import InvalidInputDataError
-from ..transcribe.exceptions import NoSpeechError
+from clipsai.exceptions import InvalidInputDataError
+from clipsai.transcribe.exceptions import NoSpeechError
 
 
 class ExceptionHandler:

@@ -15,9 +15,9 @@ from .whisperx_config_manager import WhisperXTranscriberConfigManager
 from .transcription import Transcription
 
 # local imports
-from ..media.audio_file import AudioFile
-from ..utils.type_checker import TypeChecker
-from ..utils.pytorch import assert_valid_torch_device
+from clipsai.media.audio_file import AudioFile
+from clipsai.utils.type_checker import TypeChecker
+from clipsai.utils.pytorch import assert_valid_torch_device
 
 # third party imports
 import torch
