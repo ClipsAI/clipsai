@@ -16,6 +16,7 @@ from .transcription import Transcription
 
 # local imports
 from clipsai.media.audio_file import AudioFile
+from clipsai.media.audiovideo_file import AudioVideoFile
 from clipsai.utils.type_checker import TypeChecker
 from clipsai.utils.pytorch import assert_valid_torch_device
 
@@ -91,7 +92,7 @@ class WhisperXTranscriber:
         Transcription
             the media file transcription
         """
-        self._type_checker.assert_type(media_file, "media_file", (AudioFile))
+        self._type_checker.assert_type(media_file, "media_file", (AudioFile, AudioVideoFile))
         media_file.assert_exists()
         media_file.assert_has_audio_stream()
 
