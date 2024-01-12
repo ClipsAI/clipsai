@@ -7,8 +7,6 @@ import abc
 
 # current package imports
 from .exceptions import ConfigError
-
-# local package imports
 from .type_checker import TypeChecker
 
 
@@ -25,6 +23,22 @@ class ConfigManager(abc.ABC):
         None
         """
         self._type_checker = TypeChecker()
+
+    def impute_default_config(self, config: dict) -> dict:
+        """
+        Populates missing config fields with default values.
+
+        Parameters
+        ----------
+        config: dict
+            The configuration to impute.
+
+        Returns
+        -------
+        dict
+            The config imputed with default values.
+        """
+        return config
 
     @abc.abstractmethod
     def check_valid_config(self, config: dict) -> str or None:

@@ -6,7 +6,7 @@ import torch
 from sentence_transformers import SentenceTransformer
 
 
-class RobertaTextEmbedder:
+class TextEmbedder:
     """
     A class for embedding text using the Roberta model.
     """

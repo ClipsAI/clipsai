@@ -1,24 +1,32 @@
 # Functions
-from .clip.clip import clip
+from .clip.clipfinder import ClipFinder
+from .media.audio_file import AudioFile
+from .media.audiovideo_file import AudioVideoFile
+from .media.editor import MediaEditor
+from .media.video_file import VideoFile
 from .resize.resize import resize
-from .transcribe.transcribe import transcribe
+from .transcribe.transcriber import Transcriber
 
 # Types
-from .clip.clip_model import Clip
+from .clip.clip import Clip
 from .resize.crops import Crops
 from .resize.segment import Segment
 from .transcribe.transcription import Transcription
 from .transcribe.transcription_element import Sentence, Word, Character
 
 __all__ = [
-    "clip",
-    "resize",
-    "transcribe",
-    "Clip", 
-    "Crops",
-    "Segment",
-    "Transcription",
-    "Sentence",
-    "Word",
+    "AudioFile",
+    "AudioVideoFile",
     "Character",
+    "ClipFinder",
+    "Clip",
+    "Crops",
+    "MediaEditor",
+    "Segment",
+    "Sentence",
+    "Transcriber",
+    "Transcription",
+    "VideoFile",
+    "Word",
+    "resize",
 ]

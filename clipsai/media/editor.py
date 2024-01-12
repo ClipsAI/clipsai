@@ -4,8 +4,8 @@ Editing media files with ffmpeg.
 # standard library imports
 import logging
 import subprocess
-# import os
-# import uuid
+import os
+import uuid
 
 # current package imports
 from .exceptions import MediaEditorError
@@ -17,6 +17,7 @@ from .temporal_media_file import TemporalMediaFile
 from .video_file import VideoFile
 
 # local imports
+from clipsai.filesys.file import File
 from clipsai.filesys.manager import FileSystemManager
 from clipsai.utils.conversions import seconds_to_hms_time_format
 from clipsai.utils.type_checker import TypeChecker
@@ -49,8 +50,8 @@ class MediaEditor:
     def trim(
         self,
         media_file: TemporalMediaFile,
-        start_sec: float,
-        end_sec: float,
+        start_time: float,
+        end_time: float,
         trimmed_media_file_path: str,
         overwrite: bool = True,
         video_codec: str = "copy",
@@ -72,9 +73,9 @@ class MediaEditor:
         ----------
         media_file: TemporalMediaFile
             the media file to trim
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
         trimmed_media_file_path: str
             absolute path to store the trimmed media file
@@ -114,11 +115,11 @@ class MediaEditor:
 
         Raises
         ------
-        MediaEditorError: start_sec < 0
-        MediaEditorError: end_sec < 0
-        MediaEditorError: start_sec > end_sec
-        MediaEditorError: start_sec > media_file's duration
-        MediaEditorError: end_sec > media_file's duration
+        MediaEditorError: start_time < 0
+        MediaEditorError: end_time < 0
+        MediaEditorError: start_time > end_time
+        MediaEditorError: start_time > media_file's duration
+        MediaEditorError: end_time > media_file's duration
         """
         self.assert_valid_media_file(media_file, TemporalMediaFile)
         if overwrite is True:
@@ -135,11 +136,11 @@ class MediaEditor:
             "media_file path",
             "trimmed_media_file_path",
         )
-        self._assert_valid_trim_times(media_file, start_sec, end_sec)
+        self._assert_valid_trim_times(media_file, start_time, end_time)
 
         # convert seconds to '00:00:00.00' format for ffmpeg
-        duration_secs = end_sec - start_sec
-        start_time_hms_time_format = seconds_to_hms_time_format(start_sec)
+        duration_secs = end_time - start_time
+        start_time_hms_time_format = seconds_to_hms_time_format(start_time)
         duration_hms_time_format = seconds_to_hms_time_format(duration_secs)
 
         # Initialize ffmpeg command with parameters that do not depend on conditional
@@ -354,8 +355,8 @@ class MediaEditor:
         y: str,
         opacity: float,
         overwrite: bool = True,
-        start_sec: float = None,
-        end_sec: float = None,
+        start_time: float = None,
+        end_time: float = None,
         video_codec: str = "libx264",
         audio_codec: str = "aac",
         crf: str = "23",
@@ -402,9 +403,9 @@ class MediaEditor:
         overwrite: bool
             Overwrites 'watermarked_video_file_path' if True; does not overwrite if
             False
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
         video_codec: str
             compression and decompression software for the video (libx264)
@@ -503,10 +504,10 @@ class MediaEditor:
             raise MediaEditorError(msg)
 
         # check trim specifications are valid
-        self._assert_valid_trim_times(video_file, start_sec, end_sec)
+        self._assert_valid_trim_times(video_file, start_time, end_time)
 
-        duration_secs = end_sec - start_sec
-        start_time_hms_time_format = seconds_to_hms_time_format(start_sec)
+        duration_secs = end_time - start_time
+        start_time_hms_time_format = seconds_to_hms_time_format(start_time)
         duration_hms_time_format = seconds_to_hms_time_format(duration_secs)
 
         resize_tried = (
@@ -628,8 +629,8 @@ class MediaEditor:
         corner: str,
         opacity: float,
         overwrite: bool = True,
-        start_sec: float = None,
-        end_sec: float = None,
+        start_time: float = None,
+        end_time: float = None,
         video_codec: str = "libx264",
         audio_codec: str = "aac",
         crf: str = "23",
@@ -664,9 +665,9 @@ class MediaEditor:
         overwrite: bool
             Overwrites 'watermarked_video_file_path' if True; does not overwrite if
             False
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
         video_codec: str
             compression and decompression software for the video (libx264)
@@ -742,8 +743,8 @@ class MediaEditor:
             y=corner_commands[corner]["y"],
             opacity=opacity,
             overwrite=overwrite,
-            start_sec=start_sec,
-            end_sec=end_sec,
+            start_time=start_time,
+            end_time=end_time,
             video_codec=video_codec,
             audio_codec=audio_codec,
             crf=crf,
@@ -870,104 +871,105 @@ class MediaEditor:
             merged_video_file = VideoFile(merged_video_file_path)
             return merged_video_file
 
-    # def concatenate(
-    #     self,
-    #     media_files: list[TemporalMediaFile],
-    #     concatenated_media_file_path: str,
-    #     overwrite: bool = True,
-    # ) -> MediaFile or None:
-    #     """
-    #     Concatenate media_files into a single media file.
+    def concatenate(
+        self,
+        media_files: list[TemporalMediaFile],
+        concatenated_media_file_path: str,
+        overwrite: bool = True,
+    ) -> MediaFile or None:
+        """
+        Concatenate media_files into a single media file.
 
-    #     Parameters
-    #     ----------
-    #     media_files: list[TemporalMediaFile]
-    #         list of media files to concatenate
-    #     concatenated_media_file_path: str
-    #         absolute path to store the concatenated media file
-    #     overwrite: bool
-    #         Overwrites'concatenated_media_file_path if True; does not overwrite if False
+        Parameters
+        ----------
+        media_files: list[TemporalMediaFile]
+            list of media files to concatenate
+        concatenated_media_file_path: str
+            absolute path to store the concatenated media file
+        overwrite: bool
+            Overwrites'concatenated_media_file_path if True; does not overwrite if False
 
-    #     Returns
-    #     -------
-    #     MediaFile or None
-    #         the concatenated media file if successful; None if unsuccessful
-    #     """
-    #     if overwrite is True:
-    #         self._file_system_manager.assert_parent_dir_exists(
-    #             TemporalMediaFile(concatenated_media_file_path)
-    #         )
-    #     else:
-    #         self._file_system_manager.assert_valid_path_for_new_fs_object(
-    #             concatenated_media_file_path
-    #         )
-    #     # assert media_files exist
-    #     for i, media in enumerate(media_files):
-    #         media.assert_exists()
-    #         self._file_system_manager.assert_paths_not_equal(
-    #             media.path,
-    #             concatenated_media_file_path,
-    #             "temporal_media{} path".format(i),
-    #             "concatenated_media_file_path",
-    #         )
+        Returns
+        -------
+        MediaFile or None
+            the concatenated media file if successful; None if unsuccessful
+        """
+        if overwrite is True:
+            self._file_system_manager.assert_parent_dir_exists(
+                TemporalMediaFile(concatenated_media_file_path)
+            )
+        else:
+            self._file_system_manager.assert_valid_path_for_new_fs_object(
+                concatenated_media_file_path
+            )
+        # assert media_files exist
+        for i, media in enumerate(media_files):
+            media.assert_exists()
+            self._file_system_manager.assert_paths_not_equal(
+                media.path,
+                concatenated_media_file_path,
+                "temporal_media{} path".format(i),
+                "concatenated_media_file_path",
+            )
 
-    #     # create a file containing the paths to each media file
-    #     media_file_paths = ""
-    #     for media_file in media_files:
-    #         media_file_paths += "file '{}'\n".format(media_file.path)
-    #     media_paths_file = File(
-    #         os.path.join(
-    #             K8S_PVC_DIR_PATH, "{}_media_file_paths.txt".format(uuid.uuid4().hex)
-    #         )
-    #     )
-    #     # log contents of media_paths_file
-    #     logging.debug("media_paths_file contents: %s", media_file_paths)
-    #     media_paths_file.create(media_file_paths)
-    #     logging.debug("media_paths_file path: %s", media_paths_file.path)
+        # create a file containing the paths to each media file
+        media_file_paths = ""
+        for media_file in media_files:
+            media_file_paths += "file '{}'\n".format(media_file.path)
+        media_paths_file = File(
+            os.path.join(
+                os.path.dirname(__file__),
+                "{}_media_file_paths.txt".format(uuid.uuid4().hex),
+            )
+        )
+        # log contents of media_paths_file
+        logging.debug("media_paths_file contents: %s", media_file_paths)
+        media_paths_file.create(media_file_paths)
+        logging.debug("media_paths_file path: %s", media_paths_file.path)
 
-    #     # concatenate media_files
-    #     logging.debug("Concatenating media files in editor")
-    #     result = subprocess.run(
-    #         [
-    #             "ffmpeg",
-    #             "-y",
-    #             "-f",
-    #             "concat",
-    #             "-safe",
-    #             "0",
-    #             "-i",
-    #             media_paths_file.path,
-    #             # add to remove blank screen at beginning of output
-    #             "-vf",
-    #             "setpts=PTS-STARTPTS",
-    #             concatenated_media_file_path,
-    #         ]
-    #     )
-    #     logging.debug("Concatenation complete")
-    #     media_paths_file.delete()
+        # concatenate media_files
+        logging.debug("Concatenating media files in editor")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                media_paths_file.path,
+                # add to remove blank screen at beginning of output
+                "-vf",
+                "setpts=PTS-STARTPTS",
+                concatenated_media_file_path,
+            ]
+        )
+        logging.debug("Concatenation complete")
+        media_paths_file.delete()
 
-    #     msg = (
-    #         "Terminal return code: '{}'\n"
-    #         "Output: '{}'\n"
-    #         "Err Output: '{}'\n"
-    #         "".format(result.returncode, result.stdout, result.stderr)
-    #     )
-    #     # failure
-    #     if result.returncode != SUCCESS:
-    #         err_msg = (
-    #             "Error in FFmpeg command for concatenating segments. Here is some "
-    #             "helpful troubleshooting information:\n {}".format(msg)
-    #         )
-    #         logging.error(err_msg)
-    #         return None
+        msg = (
+            "Terminal return code: '{}'\n"
+            "Output: '{}'\n"
+            "Err Output: '{}'\n"
+            "".format(result.returncode, result.stdout, result.stderr)
+        )
+        # failure
+        if result.returncode != SUCCESS:
+            err_msg = (
+                "Error in FFmpeg command for concatenating segments. Here is some "
+                "helpful troubleshooting information:\n {}".format(msg)
+            )
+            logging.error(err_msg)
+            return None
 
-    #     # success
-    #     else:
-    #         media_file = self._create_media_file_of_same_type(
-    #             concatenated_media_file_path, media_files[0]
-    #         )
-    #         media_file.assert_exists()
-    #         return media_file
+        # success
+        else:
+            media_file = self._create_media_file_of_same_type(
+                concatenated_media_file_path, media_files[0]
+            )
+            media_file.assert_exists()
+            return media_file
 
     def crop_video(
         self,
@@ -977,8 +979,8 @@ class MediaEditor:
         y: int,
         width: int,
         height: int,
-        start_sec: float = None,
-        end_sec: float = None,
+        start_time: float = None,
+        end_time: float = None,
         audio_codec: str = "aac",
         video_codec: str = "libx264",
         crf: str = "18",
@@ -1003,9 +1005,9 @@ class MediaEditor:
             width of the cropped video
         height: int
             height of the cropped video
-        start_sec: float
+        start_time: float
             the time in seconds to begin the cropped video
-        end_sec: float
+        end_time: float
             the time in seconds to end the cropped video
         audio_codec: str
             compression and decompression sfotware for the audio (aac)
@@ -1047,11 +1049,11 @@ class MediaEditor:
         )
 
         # set valid start and end times
-        if start_sec is None:
-            start_sec = 0.0
-        if end_sec is None:
-            end_sec = original_video_file.get_duration()
-        self._assert_valid_trim_times(original_video_file, start_sec, end_sec)
+        if start_time is None:
+            start_time = 0.0
+        if end_time is None:
+            end_time = original_video_file.get_duration()
+        self._assert_valid_trim_times(original_video_file, start_time, end_time)
 
         result = subprocess.run(
             [
@@ -1060,9 +1062,9 @@ class MediaEditor:
                 "-i",
                 original_video_file.path,
                 "-ss",
-                str(start_sec),
+                str(start_time),
                 "-to",
-                str(end_sec),
+                str(end_time),
                 "-vf",
                 "crop={}:{}:{}:{}".format(width, height, x, y),
                 "-c:v",
@@ -1105,129 +1107,130 @@ class MediaEditor:
             # cropped_video_file.assert_exists()
             return cropped_video_file
 
-    # def resize_video(
-    #     self,
-    #     original_video_file: VideoFile,
-    #     resized_video_file_path: str,
-    #     width: int,
-    #     height: int,
-    #     segments: list[dict],
-    #     audio_codec: str = "aac",
-    #     video_codec: str = "libx264",
-    #     crf: str = "18",
-    #     preset: str = "veryfast",
-    #     num_threads: str = "0",
-    #     overwrite: bool = True,
-    # ) -> VideoFile or None:
-    #     """
-    #     Crop a series of videos from a video file to resize the video file
+    def resize_video(
+        self,
+        original_video_file: VideoFile,
+        resized_video_file_path: str,
+        width: int,
+        height: int,
+        segments: list[dict],
+        audio_codec: str = "aac",
+        video_codec: str = "libx264",
+        crf: str = "18",
+        preset: str = "veryfast",
+        num_threads: str = "0",
+        overwrite: bool = True,
+    ) -> VideoFile or None:
+        """
+        Crop a series of videos from a video file to resize the video file
 
-    #     Parameters
-    #     ----------
-    #     original_video_file: VideoFile
-    #         the video file to crop
-    #     resized_video_file_path: str
-    #         absolute path to store the resized video file
-    #     segments: list[dict]
-    #         list of dictionaries where each dictionary is a distinct segment to crop
-    #         the video. Each dictionary has the following keys:
-    #         x: int
-    #             x-coordinate of the top left corner of the cropped video segment
-    #         y: int
-    #             y-coordinate of the top left corner of the cropped video segment
-    #         startTime: float
-    #             the time in seconds to begin the cropped segment
-    #         endTime: float
-    #             the time in seconds to end the cropped segment
-    #     audio_codec: str
-    #         compression and decompression sfotware for the audio (aac)
-    #     video_codec: str
-    #         compression and decompression software for the video (libx264)
-    #     crf: str
-    #         constant rate factor - an encoding mode that adjusts the file data rate up
-    #         or down to achieve a selected quality level rather than a specific data
-    #         rate. CRF values range from 0 to 51, with lower numbers delivering higher
-    #         quality scores
-    #     preset: str
-    #         the encoding speed to compression ratio. A slower preset will provide
-    #         better compression (compression is quality per filesize)
-    #     num_threads: str
-    #         the number of threads to use for encoding
-    #     overwrite: bool
-    #         Overwrites 'resized_video_file_path' if True; does not overwrite if False
+        Parameters
+        ----------
+        original_video_file: VideoFile
+            the video file to crop
+        resized_video_file_path: str
+            absolute path to store the resized video file
+        segments: list[dict]
+            list of dictionaries where each dictionary is a distinct segment to crop
+            the video. Each dictionary has the following keys:
+            x: int
+                x-coordinate of the top left corner of the cropped video segment
+            y: int
+                y-coordinate of the top left corner of the cropped video segment
+            start_time: float
+                the time in seconds to begin the cropped segment
+            end_time: float
+                the time in seconds to end the cropped segment
+        audio_codec: str
+            compression and decompression sfotware for the audio (aac)
+        video_codec: str
+            compression and decompression software for the video (libx264)
+        crf: str
+            constant rate factor - an encoding mode that adjusts the file data rate up
+            or down to achieve a selected quality level rather than a specific data
+            rate. CRF values range from 0 to 51, with lower numbers delivering higher
+            quality scores
+        preset: str
+            the encoding speed to compression ratio. A slower preset will provide
+            better compression (compression is quality per filesize)
+        num_threads: str
+            the number of threads to use for encoding
+        overwrite: bool
+            Overwrites 'resized_video_file_path' if True; does not overwrite if False
 
-    #     Returns
-    #     -------
-    #     VideoFile or None
-    #         the cropped video if successful; None if unsuccessful
-    #     """
-    #     self.assert_valid_media_file(original_video_file, VideoFile)
-    #     if overwrite is True:
-    #         self._file_system_manager.assert_parent_dir_exists(
-    #             VideoFile(resized_video_file_path)
-    #         )
-    #     else:
-    #         self._file_system_manager.assert_valid_path_for_new_fs_object(
-    #             resized_video_file_path
-    #         )
-    #     self._file_system_manager.assert_paths_not_equal(
-    #         original_video_file.path,
-    #         resized_video_file_path,
-    #         "original_video_file path",
-    #         "resized_video_file_path",
-    #     )
+        Returns
+        -------
+        VideoFile or None
+            the cropped video if successful; None if unsuccessful
+        """
+        self.assert_valid_media_file(original_video_file, VideoFile)
+        if overwrite is True:
+            self._file_system_manager.assert_parent_dir_exists(
+                VideoFile(resized_video_file_path)
+            )
+        else:
+            self._file_system_manager.assert_valid_path_for_new_fs_object(
+                resized_video_file_path
+            )
+        self._file_system_manager.assert_paths_not_equal(
+            original_video_file.path,
+            resized_video_file_path,
+            "original_video_file path",
+            "resized_video_file_path",
+        )
 
-    #     # crop each segment
-    #     cropped_video_files: list[VideoFile] = []
-    #     for i, segment in enumerate(segments):
-    #         cropped_video_file_path = os.path.join(
-    #             K8S_PVC_DIR_PATH, "{}_segment_{}.mp4".format(uuid.uuid4().hex, i)
-    #         )
-    #         cropped_video_file = self.crop_video(
-    #             original_video_file=original_video_file,
-    #             cropped_video_file_path=cropped_video_file_path,
-    #             x=segment["x"],
-    #             y=segment["y"],
-    #             width=width,
-    #             height=height,
-    #             start_sec=segment["startTime"],
-    #             end_sec=segment["endTime"],
-    #             audio_codec=audio_codec,
-    #             video_codec=video_codec,
-    #             crf=crf,
-    #             preset=preset,
-    #             num_threads=num_threads,
-    #             overwrite=overwrite,
-    #         )
-    #         # failure
-    #         if cropped_video_file is None:
-    #             err = (
-    #                 "Error in cropping video segment {} with segment information '{}'."
-    #                 "".format(i, segment)
-    #             )
-    #             logging.error(err)
-    #             return None
-    #         # success
-    #         else:
-    #             cropped_video_files.append(cropped_video_file)
+        # crop each segment
+        cropped_video_files: list[VideoFile] = []
+        for i, segment in enumerate(segments):
+            cropped_video_file_path = os.path.join(
+                os.path.dirname(__file__),
+                "{}_segment_{}.mp4".format(uuid.uuid4().hex, i),
+            )
+            cropped_video_file = self.crop_video(
+                original_video_file=original_video_file,
+                cropped_video_file_path=cropped_video_file_path,
+                x=segment["x"],
+                y=segment["y"],
+                width=width,
+                height=height,
+                start_time=segment["start_time"],
+                end_time=segment["end_time"],
+                audio_codec=audio_codec,
+                video_codec=video_codec,
+                crf=crf,
+                preset=preset,
+                num_threads=num_threads,
+                overwrite=overwrite,
+            )
+            # failure
+            if cropped_video_file is None:
+                err = (
+                    "Error in cropping video segment {} with segment information '{}'."
+                    "".format(i, segment)
+                )
+                logging.error(err)
+                return None
+            # success
+            else:
+                cropped_video_files.append(cropped_video_file)
 
-    #     # concatenate cropped segments
-    #     resized_video_file = self.concatenate(
-    #         media_files=cropped_video_files,
-    #         concatenated_media_file_path=resized_video_file_path,
-    #         overwrite=overwrite,
-    #     )
-    #     # delete cropped segments
-    #     for cropped_video_file in cropped_video_files:
-    #         cropped_video_file.delete()
+        # concatenate cropped segments
+        resized_video_file = self.concatenate(
+            media_files=cropped_video_files,
+            concatenated_media_file_path=resized_video_file_path,
+            overwrite=overwrite,
+        )
+        # delete cropped segments
+        for cropped_video_file in cropped_video_files:
+            cropped_video_file.delete()
 
-    #     # failure
-    #     if resized_video_file is None:
-    #         return None
-    #     # success
-    #     else:
-    #         resized_video_file.assert_exists()
-    #         return resized_video_file
+        # failure
+        if resized_video_file is None:
+            return None
+        # success
+        else:
+            resized_video_file.assert_exists()
+            return resized_video_file
 
     def instantiate_as_temporal_media_file(
         self, media_file_path: str
@@ -1253,9 +1256,8 @@ class MediaEditor:
         elif media_file.has_audio_stream():
             media_file = AudioFile(media_file.path)
         else:
-            msg = (
-                "File '{}' must be a AudioFile, or AudioVideoFile not {}."
-                "".format(media_file.path, type(media_file))
+            msg = "File '{}' must be a AudioFile, or AudioVideoFile not {}." "".format(
+                media_file.path, type(media_file)
             )
             logging.error(msg)
             raise MediaEditorError(msg)
@@ -1337,55 +1339,55 @@ class MediaEditor:
     def _check_valid_trim_times(
         self,
         media_file: TemporalMediaFile,
-        start_sec: float,
-        end_sec: float,
+        start_time: float,
+        end_time: float,
     ) -> str or None:
         """
-        Checks if start_sec and end_sec are valid times to trim the media file. Returns
-        None if so, a descriptive error message if not.
+        Checks if start_time and end_time are valid times to trim the media file.
+        Returns None if so, a descriptive error message if not.
 
         Parameters
         ----------
         media_file: TemporalMediaFile
             the media file to check
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
 
         Returns
         -------
         str or None
-            None if start_sec and end_sec are valid for the media file, a descriptive
+            None if start_time and end_time are valid for the media file, a descriptive
             error message if not
         """
         # check proper inputs
-        if start_sec < 0:
-            return "Start second ({} seconds) cannot be negative.".format(start_sec)
-        if end_sec < 0:
+        if start_time < 0:
+            return "Start second ({} seconds) cannot be negative.".format(start_time)
+        if end_time < 0:
             return "End second ({} seconds) cannot be negative.".format
-        if start_sec > end_sec:
+        if start_time > end_time:
             return (
                 "Start second ({} seconds) cannot exceed end second ({} seconds)."
-                "".format(start_sec, end_sec)
+                "".format(start_time, end_time)
             )
 
         duration = media_file.get_duration()
         if duration == -1:
             return (
                 "Can't retrieve video duration from media file '{}'. Attempting to "
-                "trim with given start_sec ({}) and end_sec ({}) regardless."
-                "".format(duration, start_sec, end_sec)
+                "trim with given start_time ({}) and end_time ({}) regardless."
+                "".format(duration, start_time, end_time)
             )
-        elif start_sec > duration:
+        elif start_time > duration:
             return (
                 "Start second ({} seconds) cannot exceed video duration ({} seconds)."
-                "".format(start_sec, duration)
+                "".format(start_time, duration)
             )
-        elif end_sec > duration + 1:
+        elif end_time > duration + 1:
             return (
                 "End second ({} seconds) cannot exceed video duration ({} seconds)."
-                "".format(end_sec, duration)
+                "".format(end_time, duration)
             )
 
         return None
@@ -1393,53 +1395,53 @@ class MediaEditor:
     def _is_valid_trim_times(
         self,
         media_file: TemporalMediaFile,
-        start_sec: float,
-        end_sec: float,
+        start_time: float,
+        end_time: float,
     ) -> bool:
         """
-        Returns True if start_sec and end_sec are valid times to trim the media file.
+        Returns True if start_time and end_time are valid times to trim the media file.
         Returns False if not.
 
         Parameters
         ----------
         media_file: TemporalMediaFile
             the media file to check
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
 
         Returns
         -------
         bool
-            True if start_sec and end_sec are valid for the media file, False if not
+            True if start_time and end_time are valid for the media file, False if not
         """
-        return self._check_valid_trim_times(media_file, start_sec, end_sec) is None
+        return self._check_valid_trim_times(media_file, start_time, end_time) is None
 
     def _assert_valid_trim_times(
         self,
         media_file: TemporalMediaFile,
-        start_sec: float,
-        end_sec: float,
+        start_time: float,
+        end_time: float,
     ) -> None:
         """
-        Raises an error if start_sec and end_sec are not valid times to trim the media
+        Raises an error if start_time and end_time are not valid times to trim the media
         file. Raises an error if not.
 
         Parameters
         ----------
         media_file: TemporalMediaFile
             the media file to check
-        start_sec: float
+        start_time: float
             the time in seconds the trimmed media file begins
-        end_sec: float
+        end_time: float
             the time in seconds the trimmed media file ends
 
         Raises
         ------
-        MediaEditorError: start_sec and end_sec are not valid for the media file
+        MediaEditorError: start_time and end_time are not valid for the media file
         """
-        msg = self._check_valid_trim_times(media_file, start_sec, end_sec)
+        msg = self._check_valid_trim_times(media_file, start_time, end_time)
         if msg is not None:
             raise MediaEditorError(msg)
 

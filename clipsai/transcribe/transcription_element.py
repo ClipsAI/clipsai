@@ -2,6 +2,7 @@
 A base class to represent an element (sentence, word, or character) in a transcription.
 """
 
+
 class TranscriptionElement:
     """
     Represents an element (sentence, word, or character) in a transcription.
@@ -21,7 +22,7 @@ class TranscriptionElement:
         end_time: float,
         start_char: int,
         end_char: int,
-        text: str
+        text: str,
     ):
         """
         Constructs all the necessary attributes for the element object.
@@ -85,7 +86,7 @@ class TranscriptionElement:
         Returns a string representation of the element.
         """
         return self._text
-    
+
     def __eq__(self, other: "TranscriptionElement") -> bool:
         """
         Returns True if the element is equal to the other element, False otherwise.
@@ -97,13 +98,13 @@ class TranscriptionElement:
             and self._end_char == other.end_char
             and self._text == other.text
         )
-    
+
     def __ne__(self, __value: object) -> bool:
         """
         Returns True if the element is not equal to the other element, False otherwise.
         """
         return not self.__eq__(__value)
-    
+
     def __bool__(self) -> bool:
         """
         Returns True if the element is not empty, False otherwise.
@@ -130,7 +131,7 @@ class Sentence(TranscriptionElement):
         end_time: float,
         start_char: int,
         end_char: int,
-        text: str
+        text: str,
     ):
         """
         Constructs all the necessary attributes for the sentence object.
@@ -170,7 +171,7 @@ class Word(TranscriptionElement):
         end_time: float,
         start_char: int,
         end_char: int,
-        text: str
+        text: str,
     ):
         """
         Constructs all the necessary attributes for the word object.
@@ -191,7 +192,7 @@ class Word(TranscriptionElement):
         super().__init__(start_time, end_time, start_char, end_char, text)
 
 
-class Character():
+class Character:
     """
     Represents a character in a transcription.
 
@@ -200,7 +201,8 @@ class Character():
     start_time (float): The start time of the character in seconds.
     end_time (float): The end time of the character in seconds.
     word_index (int): The index of the word in the transcription of the character.
-    sentence_index (int): The index of the sentence in the transcription of the character.
+    sentence_index (int): The index of the sentence in the transcription of the
+        character.
     text (str): The text of the character.
     """
 
@@ -210,7 +212,7 @@ class Character():
         end_time: float,
         word_index: int,
         sentence_index: int,
-        text: str
+        text: str,
     ):
         """
         Constructs all the necessary attributes for the character object.
@@ -254,7 +256,7 @@ class Character():
         Returns the index of the word in the transcription of the character.
         """
         return self._word_index
-    
+
     @property
     def sentence_index(self) -> int:
         """
@@ -274,7 +276,7 @@ class Character():
         Returns a string representation of the character.
         """
         return self._text
-    
+
     def __eq__(self, other: "Character") -> bool:
         """
         Returns True if the element is equal to the other character, False otherwise.
@@ -286,13 +288,13 @@ class Character():
             and self._sentence_index == other.sentence_index
             and self._text == other.text
         )
-    
+
     def __ne__(self, __value: object) -> bool:
         """
         Returns True if the element is not equal to the other element, False otherwise.
         """
         return not self.__eq__(__value)
-    
+
     def __bool__(self) -> bool:
         """
         Returns True if the element is not empty, False otherwise.

@@ -11,21 +11,23 @@ import logging
 
 # current package imports
 from .exceptions import NoSpeechError
-from .whisperx_config_manager import WhisperXTranscriberConfigManager
+from .exceptions import TranscriberConfigError
 from .transcription import Transcription
 
 # local imports
 from clipsai.media.audio_file import AudioFile
-from clipsai.media.audiovideo_file import AudioVideoFile
+from clipsai.media.editor import MediaEditor
+from clipsai.utils.config_manager import ConfigManager
+from clipsai.utils.pytorch import assert_valid_torch_device, get_compute_device
 from clipsai.utils.type_checker import TypeChecker
-from clipsai.utils.pytorch import assert_valid_torch_device
+from clipsai.utils.utils import find_missing_dict_keys
 
 # third party imports
 import torch
 import whisperx
 
 
-class WhisperXTranscriber:
+class Transcriber:
     """
     A class to transcribe using whisperx.
     """
@@ -41,16 +43,17 @@ class WhisperXTranscriber:
         ----------
         model_size: str
             One of the model sizes implemented by whisper/whisperx
-        device: 'cpu' | 'cuda'
-            Hardware to run the machine learning model on
+        device: str
+            PyTorch device to perform computations on. Ex: 'cpu', 'cuda'. Default is
+            None (auto detects the correct device)
         precision: 'float16' | 'int8'
             Precision to perform prediction with
         """
-        self._config_manager = WhisperXTranscriberConfigManager()
+        self._config_manager = TranscriberConfigManager()
         self._type_checker = TypeChecker()
 
         if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            device = get_compute_device()
         if precision is None:
             precision = "float16" if torch.cuda.is_available() else "int8"
         if model_size is None:
@@ -72,7 +75,7 @@ class WhisperXTranscriber:
 
     def transcribe(
         self,
-        media_file: AudioFile,
+        audio_file_path: str,
         iso6391_lang_code: str or None = None,
         batch_size: int = 16,
     ) -> Transcription:
@@ -81,8 +84,8 @@ class WhisperXTranscriber:
 
         Parameters
         ----------
-        media_file: AudioFile
-            the media file to transcribe
+        audio_file_path: str
+            absolute path to the audio file to transcribe
         iso6391_lang_code: str or None
             ISO 639-1 language code to transcribe in
         batch_size: int = 16
@@ -92,7 +95,8 @@ class WhisperXTranscriber:
         Transcription
             the media file transcription
         """
-        self._type_checker.assert_type(media_file, "media_file", (AudioFile, AudioVideoFile))
+        editor = MediaEditor()
+        media_file = editor.instantiate_as_temporal_media_file(audio_file_path)
         media_file.assert_exists()
         media_file.assert_has_audio_stream()
 
@@ -200,18 +204,18 @@ class WhisperXTranscriber:
                 # character information
                 new_char_dic = {
                     "char": char["char"],
-                    "startTime": char_start_time,
-                    "endTime": char_end_time,
+                    "start_time": char_start_time,
+                    "end_time": char_end_time,
                     "speaker": None,
                 }
                 char_info.append(new_char_dic)
 
         transcription_dict = {
-            "sourceSoftware": "whisperx-v3",
-            "timeCreated": datetime.now(),
+            "source_software": "whisperx-v3",
+            "time_created": datetime.now(),
             "language": transcription["language"],
-            "numSpeakers": None,
-            "charInfo": char_info,
+            "num_speakers": None,
+            "char_info": char_info,
         }
         return Transcription(transcription_dict)
 
@@ -236,3 +240,319 @@ class WhisperXTranscriber:
         audio = whisperx.load_audio(media_file.path)
         language = self._model.detect_language(audio)
         return language
+
+
+class TranscriberConfigManager(ConfigManager):
+    """
+    A class for getting information about and validating Transcriber
+    configuration settings.
+    """
+
+    def __init__(self):
+        """
+        Parameters
+        ----------
+        None
+        """
+        super().__init__()
+
+    def check_valid_config(self, config: dict) -> str or None:
+        """
+        Checks that 'config' contains valid configuration settings. Returns None if
+        valid, a descriptive error message if invalid.
+
+        Parameters
+        ----------
+        config: dict
+            A dictionary containing the configuration settings for WhisperXTranscriber.
+
+        Returns
+        -------
+        str or None
+            None if the inputs are valid, otherwise an error message.
+        """
+        # type check inputs
+        setting_checkers = {
+            "language": self.check_valid_language,
+            "model_size": self.check_valid_model_size,
+            "precision": self.check_valid_precision,
+        }
+
+        # existence check
+        missing_keys = find_missing_dict_keys(config, setting_checkers.keys())
+        if len(missing_keys) != 0:
+            return "WhisperXTranscriber missing configuration settings: {}".format(
+                missing_keys
+            )
+
+        # value checks
+        for setting, checker in setting_checkers.items():
+            # None values = default values (depends on the compute device)
+            if config[setting] is None:
+                continue
+            err = checker(config[setting])
+            if err is not None:
+                return err
+
+        return None
+
+    def get_valid_model_sizes(self) -> list[str]:
+        """
+        Returns the valid model sizes to transcribe with whisperx
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        list[str]
+            list of valid model sizes to transcribe with whisperx
+        """
+        valid_model_sizes = [
+            "tiny",
+            "base",
+            "small",
+            "medium",
+            "large-v1",
+            "large-v2",
+        ]
+        return valid_model_sizes
+
+    def check_valid_model_size(self, model_size: str) -> str or None:
+        """
+        Checks if 'model_size' is valid
+
+        Parameters
+        ----------
+        model_size: str
+            The transcription model size
+
+        Returns
+        -------
+        str or None
+            None if 'model_size' is valid. A descriptive error message if 'model_size'
+            is invalid
+        """
+        if model_size not in self.get_valid_model_sizes():
+            msg = "Invalid whisper model size '{}'. Must be one of: {}." "".format(
+                model_size, self.get_valid_model_sizes()
+            )
+            return msg
+
+        return None
+
+    def is_valid_model_size(self, model_size: str) -> bool:
+        """
+        Returns True is 'model_size' is valid, False if not
+
+        Parameters
+        ----------
+        model_size: str
+            The transcription model size
+
+        Returns
+        -------
+        bool
+            True is 'model_size' is valid, False if not
+        """
+        msg = self.check_valid_model_size(model_size)
+        if msg is None:
+            return True
+        else:
+            return False
+
+    def assert_valid_model_size(self, model_size: str) -> None:
+        """
+        Raises an Error if 'model_size' is invalid
+
+        Parameters
+        ----------
+        model_size: str
+            The transcription model size
+
+        Raises
+        ------
+        WhisperXTranscriberConfigError: 'model_size' is invalid
+        """
+        msg = self.check_valid_model_size(model_size)
+        if msg is not None:
+            raise TranscriberConfigError(msg)
+
+    def get_valid_languages(self) -> list[str]:
+        """
+        Returns the valid languages to transcribe with whisperx
+
+        - See https://github.com/m-bain/whisperX#other-languages for updated lang info
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        list[str]:
+            list of ISO 639-1 language codes of languages that can be transcribed
+        """
+        valid_languages = [
+            "en",  # english
+            "fr",  # french
+            "de",  # german
+            "es",  # spanish
+            "it",  # italian
+            "ja",  # japanese
+            "zh",  # chinese
+            "nl",  # dutch
+            "uk",  # ukrainian
+            "pt",  # portuguese
+        ]
+        return valid_languages
+
+    def check_valid_language(self, iso6391_lang_code: str) -> str or None:
+        """
+        Checks if 'iso6391_lang_code' is a valid ISO 639-1 language code for whisperx to
+        transcribe
+
+        Parameters
+        ----------
+        iso6391_lang_code: str
+            The language code to check
+
+        Returns
+        -------
+        str or None
+            None if 'iso6391_lang_code' is a valid ISO 639-1 language code for whisperx
+            to transcribe. A descriptive error message if 'iso6391_lang_code' is invalid
+        """
+        if iso6391_lang_code not in self.get_valid_languages():
+            msg = "Invalid ISO 639-1 language '{}'. Must be one of: {}." "".format(
+                iso6391_lang_code, self.get_valid_languages()
+            )
+            return msg
+
+        return None
+
+    def is_valid_language(self, iso6391_lang_code: str) -> bool:
+        """
+        Returns True if 'iso6391_lang_code' is a valid ISO 639-1 language code for
+        whisperx to transcribe, False if not
+
+        Parameters
+        ----------
+        iso6391_lang_code: str
+            The language code to check
+
+        Returns
+        -------
+        bool
+            True if 'iso6391_lang_code' is a valid ISO 639-1 language code for whisperx
+            to transcribe, False if not
+        """
+        msg = self.check_valid_language(iso6391_lang_code)
+        if msg is None:
+            return True
+        else:
+            return False
+
+    def assert_valid_language(self, iso6391_lang_code: str) -> None:
+        """
+        Raises TranscriptionError if 'iso6391_lang_code' is not a valid ISO 639-1
+        language code for whisperx to transcribe in
+
+        Parameters
+        ----------
+        iso6391_lang_code: str
+            The language code to check
+
+        Raises
+        ------
+        WhisperXTranscriberConfigError: if 'iso6391_lang_code' is not a valid
+        ISO 639-1 language code for whisperx to transcribe in
+        """
+        msg = self.check_valid_language(iso6391_lang_code)
+        if msg is not None:
+            raise TranscriberConfigError(msg)
+
+    def get_valid_precisions(self) -> list[str]:
+        """
+        Returns the valid precisions to transcribe with whisperx
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        list[str]:
+            list of compute types that can be used to transcribe
+        """
+        valid_precisions = [
+            "float32",
+            "float16",
+            "int8",
+        ]
+        return valid_precisions
+
+    def check_valid_precision(self, precision: str) -> str or None:
+        """
+        Checks if 'precision' is valid to transcribe with whisperx
+
+        Parameters
+        ----------
+        precision: str
+            The precision to check
+
+        Returns
+        -------
+        str or None
+            None if 'precision' is valid. A descriptive error message if invalid
+        """
+        if precision not in self.get_valid_precisions():
+            msg = "Invalid compute type '{}'. Must be one of: {}." "".format(
+                precision, self.get_valid_precisions()
+            )
+            return msg
+
+        return None
+
+    def is_valid_precision(self, precision: str) -> bool:
+        """
+        Returns True if 'precision' is valid to transcribe with whisperx, False if not
+
+        Parameters
+        ----------
+        precision: str
+            The precision to check
+
+        Returns
+        -------
+        bool
+            True if 'precision' is valid to transcribe with whisperx, False if not
+        """
+        msg = self.check_valid_precision(precision)
+        if msg is None:
+            return True
+        else:
+            return False
+
+    def assert_valid_precision(self, precision: str) -> None:
+        """
+        Raises TranscriptionError if 'precision' is invalid to transcribe with whisperx
+
+        Parameters
+        ----------
+        precision: str
+            The precision to check
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        WhisperXTranscriberConfigError: if 'precision' is invalid to transcribe with
+        whisperx
+        """
+        msg = self.check_valid_precision(precision)
+        if msg is not None:
+            raise TranscriberConfigError(msg)

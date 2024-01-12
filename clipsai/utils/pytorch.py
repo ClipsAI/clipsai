@@ -16,7 +16,7 @@ import torch
 
 def get_valid_torch_devices() -> str or None:
     """
-    Returns a list of valid PyTorch devices to use for computation on CAI backend
+    Returns a list of valid PyTorch devices to use for computation
 
     Parameters
     ----------
@@ -25,7 +25,7 @@ def get_valid_torch_devices() -> str or None:
     Returns
     -------
     list
-        a list of valid PyTorch devices to use for computation on CAI backend
+        a list of valid PyTorch devices to use for computation
     """
     return ["cpu", "cuda", "mps"]
 
@@ -38,7 +38,7 @@ def check_valid_torch_device(device: str) -> str or None:
     Parameters
     ----------
     device: str
-        The PyTorch device to perform computation on
+        PyTorch device to perform computations on. Ex: 'cpu', 'cuda'
 
     Returns
     -------
@@ -68,7 +68,7 @@ def is_valid_torch_device(device: str) -> bool:
     Parameters
     ----------
     device: str
-        the pytorch hardware device to use for computation
+        PyTorch device to perform computations on. Ex: 'cpu', 'cuda'
 
     Returns
     -------
@@ -90,7 +90,7 @@ def assert_valid_torch_device(device: str) -> bool:
     Parameters
     ----------
     device: str
-        the pytorch hardware device to use for computation
+        PyTorch device to perform computations on. Ex: 'cpu', 'cuda'.
 
     Returns
     -------
@@ -117,7 +117,7 @@ def get_compute_device() -> str:
     Returns
     -------
     str
-        compute device to use for computation
+        PyTorch device to perform computations on. Ex: 'cpu', 'cuda'
     """
     if torch.cuda.is_available():
         return "cuda"
@@ -133,7 +133,7 @@ def check_compute_device_available(device: str) -> str or None:
     Parameters
     ----------
     device: str
-        device to perform computation on
+        Compute device to perform computations on. Ex: 'cpu', 'cuda'.
 
     Returns
     -------
@@ -157,6 +157,7 @@ def check_compute_device_available(device: str) -> str or None:
     # 'cpu' is always available
     return None
 
+
 def is_compute_device_available(device: str) -> bool:
     """
     Returns True if 'device' is valid for CAI backend and is available for performing
@@ -165,7 +166,7 @@ def is_compute_device_available(device: str) -> bool:
     Parameters
     ----------
     device: str
-        device to perform computation on
+        Compute device to perform computations on. Ex: 'cpu', 'cuda'.
 
     Returns
     -------
@@ -175,6 +176,7 @@ def is_compute_device_available(device: str) -> bool:
     """
     return check_compute_device_available(device) is None
 
+
 def assert_compute_device_available(device: str) -> None:
     """
     Raises an error if 'device' is not valid for CAI backend or is not available for
@@ -183,7 +185,7 @@ def assert_compute_device_available(device: str) -> None:
     Parameters
     ----------
     device: str
-        device to perform computation on
+        Compute device to perform computation on
 
     Returns
     -------
@@ -244,6 +246,7 @@ def max_magnitude_2d(tensor: torch.tensor, dim: int) -> torch.tensor:
 
     return max_tensor
 
+
 def reset_seed(number):
     """
     Reset random seed to the specific number
@@ -258,6 +261,7 @@ def reset_seed(number):
     """
     random.seed(number)
     torch.manual_seed(number)
+
 
 def mem_stats() -> dict:
     """
@@ -295,15 +299,10 @@ def mem_stats() -> dict:
     free_cpu_memory = psutil.virtual_memory().available
 
     return {
-        "gpu": {
-            "total": total_gpu_memory,
-            "free": free_gpu_memory
-        },
-        "cpu": {
-            "total": total_cpu_memory,
-            "free": free_cpu_memory
-        }
+        "gpu": {"total": total_gpu_memory, "free": free_gpu_memory},
+        "cpu": {"total": total_cpu_memory, "free": free_cpu_memory},
     }
+
 
 def get_free_cpu_memory() -> int:
     """

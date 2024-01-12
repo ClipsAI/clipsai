@@ -7,7 +7,6 @@ Notes
 """
 # standard library imports
 from __future__ import annotations
-import os
 import logging
 import subprocess
 
@@ -181,18 +180,3 @@ class AudioFile(TemporalMediaFile):
             audio_file = AudioFile(extracted_audio_file_path)
             audio_file.assert_exists()
             return audio_file
-
-    def convert_to_wav_path(self) -> str:
-        """
-        Converts an audio file path to a WAV file path.
-
-        Returns
-        -------
-        str
-            The modified path with a '.wav' extension.
-        """
-        # Split the path into root and extension
-        root, _ = os.path.splitext(self.path)
-        # Append the .wav extension to the root
-        wav_path = root + ".wav"
-        return wav_path

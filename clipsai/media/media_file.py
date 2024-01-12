@@ -5,14 +5,11 @@ Working with media files (i.e. image, audio, video).
 import json
 import logging
 import subprocess
-import uuid
-import os
 
 # current package imports
 from .exceptions import NoAudioStreamError, NoVideoStreamError
 
 # local imports
-from clipsai.filesys.dir import Dir
 from clipsai.filesys.file import File
 from clipsai.filesys.manager import FileSystemManager
 
@@ -469,60 +466,3 @@ class MediaFile(File):
         """
         self.assert_exists()
         return self.has_video_stream() and not self.has_audio_stream()
-
-    def get_temp_frames_folder(
-        start_time: float, video_path: str, min_frames: int, fps: int
-    ):
-        """
-        Gets the temp frames folder which holds the desired min frames of the asset.
-
-        Parameters
-        ----------
-        start_time: float
-            the start time of the clip
-        video_path: str
-            the path to the video file
-        min_frames: int
-            the minimum number of frames to extract
-        fps: int
-            the frames per second of the video
-
-        Returns
-        -------
-        str
-            the path to the temp frames folder
-        """
-        # create the temp frames folder
-        frames_dir = Dir(os.path.join("/temp", str(uuid.uuid4())))
-        if frames_dir.exists():
-            frames_dir.delete_contents()
-        else:
-            frames_dir.create()
-
-        # Extract frames from video that we're interested in
-        result = subprocess.run(
-            [
-                "ffmpeg",
-                "-ss",
-                str(start_time),
-                "-i",
-                video_path,
-                "-vf",
-                "fps={}".format(fps),
-                "-frames:v",
-                str(min_frames),
-                "-pix_fmt",
-                "yuv420p",
-                "{}frame_%04d.jpg".format(frames_dir),
-            ],
-            check=True,
-            stderr=subprocess.PIPE,
-        )
-
-        if result.returncode != 0:
-            logging.error(
-                "FFmpeg failed for {} error: {}".format(video_path, result.stderr)
-            )
-            return None
-
-        return frames_dir

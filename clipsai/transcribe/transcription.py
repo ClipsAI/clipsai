@@ -91,7 +91,7 @@ class Transcription:
         Returns the language of the transcription.
         """
         return self._language
-    
+
     @property
     def start_time(self) -> float:
         """
@@ -106,10 +106,10 @@ class Transcription:
         """
         char_info = self.get_char_info()
         for i in range(len(char_info) - 1, -1, -1):
-            if char_info[i]["endTime"] is not None:
-                return char_info[i]["endTime"]
-            if char_info[i]["startTime"] is not None:
-                return char_info[i]["startTime"]
+            if char_info[i]["end_time"] is not None:
+                return char_info[i]["end_time"]
+            if char_info[i]["start_time"] is not None:
+                return char_info[i]["start_time"]
 
     @property
     def text(self) -> str:
@@ -117,7 +117,7 @@ class Transcription:
         Returns the full text of the transcription
         """
         return self._text
-    
+
     @property
     def characters(self) -> list[Character]:
         """
@@ -126,13 +126,15 @@ class Transcription:
         """
         chars = []
         for char_info in self.get_char_info():
-            chars.append(Character(
-                start_time=char_info["startTime"],
-                end_time=char_info["endTime"],
-                word_index=char_info["wordIdx"],
-                sentence_index=char_info["sentenceIdx"],
-                text=char_info["char"]
-            ))
+            chars.append(
+                Character(
+                    start_time=char_info["start_time"],
+                    end_time=char_info["end_time"],
+                    word_index=char_info["work_index"],
+                    sentence_index=char_info["sentence_index"],
+                    text=char_info["char"],
+                )
+            )
         return chars
 
     @property
@@ -143,13 +145,15 @@ class Transcription:
         """
         words = []
         for word_info in self.get_word_info():
-            words.append(Word(
-                start_time=word_info["startTime"],
-                end_time=word_info["endTime"],
-                start_char=word_info["startChar"],
-                end_char=word_info["endChar"],
-                text=word_info["word"],
-            ))
+            words.append(
+                Word(
+                    start_time=word_info["start_time"],
+                    end_time=word_info["end_time"],
+                    start_char=word_info["start_char"],
+                    end_char=word_info["end_char"],
+                    text=word_info["word"],
+                )
+            )
         return words
 
     @property
@@ -160,12 +164,14 @@ class Transcription:
         """
         sentences = []
         for sentence_info in self.get_sentence_info():
-            sentences.append(Sentence(
-                start_time=sentence_info["startTime"],
-                end_time=sentence_info["endTime"],
-                start_char=sentence_info["startChar"],
-                end_char=sentence_info["endChar"],
-            ))
+            sentences.append(
+                Sentence(
+                    start_time=sentence_info["start_time"],
+                    end_time=sentence_info["end_time"],
+                    start_char=sentence_info["start_char"],
+                    end_char=sentence_info["end_char"],
+                )
+            )
         return sentences
 
     def get_char_info(
@@ -201,7 +207,7 @@ class Transcription:
         else:
             start_index = self.find_char_index(start_time, type_of_time="start")
             end_index = self.find_char_index(end_time, type_of_time="end")
-            return char_info[start_index: end_index + 1]
+            return char_info[start_index : end_index + 1]
 
     def get_word_info(
         self,
@@ -238,7 +244,7 @@ class Transcription:
         else:
             start_index = self.find_word_index(start_time, type_of_time="start")
             end_index = self.find_word_index(end_time, type_of_time="end")
-            return word_info[start_index: end_index + 1]
+            return word_info[start_index : end_index + 1]
 
     def get_sentence_info(
         self,
@@ -294,9 +300,7 @@ class Transcription:
         int
             The index of char_info that is closest to 'target_time'
         """
-        return self._find_index(
-            self.get_char_info(), target_time, type_of_time
-        )
+        return self._find_index(self.get_char_info(), target_time, type_of_time)
 
     def find_word_index(self, target_time: float, type_of_time: str) -> int:
         """
@@ -319,9 +323,7 @@ class Transcription:
         int
             The index of word_info that is closest to 'target_time'.
         """
-        return self._find_index(
-            self.get_word_info(), target_time, type_of_time
-        )
+        return self._find_index(self.get_word_info(), target_time, type_of_time)
 
     def find_sentence_index(self, target_time: float, type_of_time: str) -> int:
         """
@@ -344,10 +346,8 @@ class Transcription:
         int
             The index of word_info that is closest to 'target_time'
         """
-        return self._find_index(
-            self.get_sentence_info(), target_time, type_of_time
-        )
-    
+        return self._find_index(self.get_sentence_info(), target_time, type_of_time)
+
     def store_as_json_file(self, file_path: str) -> JSONFile:
         """
         Stores the transcription as a json file. 'file_path' is overwritten if already
@@ -375,18 +375,18 @@ class Transcription:
             char_info_needed_for_storage.append(
                 {
                     "char": char_info["char"],
-                    "startTime": char_info["startTime"],
-                    "endTime": char_info["endTime"],
+                    "start_time": char_info["start_time"],
+                    "end_time": char_info["end_time"],
                     "speaker": char_info["speaker"],
                 }
             )
 
         transcription_dict = {
-            "sourceSoftware": self._source_software,
-            "timeCreated": str(self._created_time),
+            "source_software": self._source_software,
+            "time_created": str(self._created_time),
             "language": self._language,
-            "numSpeakers": self._num_speakers,
-            "charInfo": char_info_needed_for_storage,
+            "num_speakers": self._num_speakers,
+            "char_info": char_info_needed_for_storage,
         }
 
         json_file.create(transcription_dict)
@@ -404,16 +404,16 @@ class Transcription:
         -------
         None
         """
-        title = "charInfo"
+        title = "Character Info"
         print(title)
         print("-" * len(title))
         for i, char_info in enumerate(self.get_char_info()):
             print("char: {}".format(char_info["char"]))
-            print("startTime: {}".format(char_info["startTime"]), end=" | ")
-            print("endTime: {}".format(char_info["endTime"]))
+            print("start_time: {}".format(char_info["start_time"]), end=" | ")
+            print("end_time: {}".format(char_info["end_time"]))
             print("index: {}".format(i), end=" | ")
-            print("wordIndex: {}".format(char_info["wordIdx"]), end=" | ")
-            print("sentenceIndex: {}\n".format(char_info["sentenceIdx"]))
+            print("word_index: {}".format(char_info["work_index"]), end=" | ")
+            print("sentence_index: {}\n".format(char_info["sentence_index"]))
 
     def print_word_info(self) -> None:
         """
@@ -427,17 +427,17 @@ class Transcription:
         -------
         None
         """
-        title = "wordInfo"
+        title = "Word Info"
         print(title)
         print("-" * len(title))
         for i, word_info in enumerate(self.get_word_info()):
             print("word: '{}'".format(word_info["word"]), end=" | ")
-            print("wordIndex: {}".format(i))
+            print("word_index: {}".format(i))
             print("speaker: {}".format(word_info["speaker"]))
-            print("startTime: {}".format(word_info["startTime"]), end=" | ")
-            print("endTime: {}".format(word_info["endTime"]))
-            print("startChar: {}".format(word_info["startChar"]), end=" | ")
-            print("endChar: {}\n".format(word_info["endChar"]))
+            print("start_time: {}".format(word_info["start_time"]), end=" | ")
+            print("end_time: {}".format(word_info["end_time"]))
+            print("start_char: {}".format(word_info["start_char"]), end=" | ")
+            print("end_char: {}\n".format(word_info["end_char"]))
 
     def print_sentence_info(self) -> None:
         """
@@ -451,17 +451,17 @@ class Transcription:
         -------
         None
         """
-        title = "sentenceInfo"
+        title = "Sentence Info"
         print(title)
         print("-" * len(title))
         for i, sentence_info in enumerate(self.get_sentence_info()):
             print("sentence: '{}'".format(sentence_info["sentence"]))
-            print("sentenceIndex: {}".format(i))
-            print("startChar: {}".format(sentence_info["startChar"]), end=" | ")
-            print("endChar: {}".format(sentence_info["endChar"]))
-            print("startTime: {}".format(sentence_info["startTime"]), end=" | ")
-            print("endTime: {}\n".format(sentence_info["endTime"]))
-    
+            print("sentence_index: {}".format(i))
+            print("start_char: {}".format(sentence_info["start_char"]), end=" | ")
+            print("end_char: {}".format(sentence_info["end_char"]))
+            print("start_time: {}".format(sentence_info["start_time"]), end=" | ")
+            print("end_time: {}\n".format(sentence_info["end_time"]))
+
     def _find_index(
         self, transcript_info: list[dict], target_time: float, type_of_time: str
     ) -> int:
@@ -493,9 +493,7 @@ class Transcription:
         if (transcript_start <= target_time <= transcript_end) is False:
             err = (
                 "target_time '{}' seconds is not within the range of the transcript "
-                "times: {} - {}".format(
-                    target_time, self.start_time, self.end_time
-                )
+                "times: {} - {}".format(target_time, self.start_time, self.end_time)
             )
             logging.error(err)
             raise TranscriptionError(err)
@@ -503,8 +501,8 @@ class Transcription:
         left, right = 0, len(transcript_info) - 1
         while left <= right:
             mid = left + (right - left) // 2
-            start_time = transcript_info[mid]["startTime"]
-            end_time = transcript_info[mid]["endTime"]
+            start_time = transcript_info[mid]["start_time"]
+            end_time = transcript_info[mid]["end_time"]
 
             if start_time <= target_time <= end_time:
                 return mid
@@ -518,8 +516,6 @@ class Transcription:
         else:
             return right + 1 if right == -1 else right
 
-
-    
     def _init_from_json_file(self, json_file: JSONFile) -> None:
         """
         Initializes the transcription object from an existing json file
@@ -559,16 +555,16 @@ class Transcription:
         """
         self._assert_valid_transcription_data(transcription)
 
-        if isinstance(transcription["timeCreated"], str):
-            transcription["timeCreated"] = datetime.strptime(
-                transcription["timeCreated"], "%Y-%m-%d %H:%M:%S.%f"
+        if isinstance(transcription["time_created"], str):
+            transcription["time_created"] = datetime.strptime(
+                transcription["time_created"], "%Y-%m-%d %H:%M:%S.%f"
             )
 
-        self._created_time = transcription["timeCreated"]
-        self._source_software = transcription["sourceSoftware"]
+        self._created_time = transcription["time_created"]
+        self._source_software = transcription["source_software"]
         self._language = transcription["language"]
-        self._num_speakers = transcription["numSpeakers"]
-        self._char_info = transcription["charInfo"]
+        self._num_speakers = transcription["num_speakers"]
+        self._char_info = transcription["char_info"]
         # derived data
         self._build_text()
         self._build_word_info()
@@ -590,28 +586,28 @@ class Transcription:
 
         # ensure transcription has valid keys and datatypes
         transcription_keys_correct_data_types = {
-            "sourceSoftware": (str),
-            "timeCreated": (datetime, str),
+            "source_software": (str),
+            "time_created": (datetime, str),
             "language": (str),
-            "numSpeakers": (int, type(None)),
-            "charInfo": (list),
+            "num_speakers": (int, type(None)),
+            "char_info": (list),
         }
         self._type_checker.assert_dict_elems_type(
             transcription, transcription_keys_correct_data_types
         )
 
-        # ensure charInfo contains dictionaries
-        for char_info in transcription["charInfo"]:
+        # ensure char_info contains dictionaries
+        for char_info in transcription["char_info"]:
             self._type_checker.assert_type(char_info, "char_info", dict)
 
-        # ensure charInfo has valid keys and datatypes
+        # ensure char_info has valid keys and datatypes
         char_dict_keys_correct_data_types = {
             "char": (str),
-            "startTime": (float, type(None)),
-            "endTime": (float, type(None)),
+            "start_time": (float, type(None)),
+            "end_time": (float, type(None)),
             "speaker": (int, type(None)),
         }
-        for char_dict in transcription["charInfo"]:
+        for char_dict in transcription["char_info"]:
             self._type_checker.are_dict_elems_of_type(
                 char_dict,
                 char_dict_keys_correct_data_types,
@@ -664,8 +660,8 @@ class Transcription:
         cur_word_idx = 0
         prev_char_info = {
             "char": " ",  # set to space so first char is always a word start
-            "startTime": None,
-            "endTime": None,
+            "start_time": None,
+            "end_time": None,
             "speaker": None,
         }
         last_recorded_time = 0
@@ -677,20 +673,20 @@ class Transcription:
             if self._is_word_start(prev_char, cur_char):
                 cur_word = ""
                 cur_word_start_char_idx = i
-                if cur_char_info["startTime"] is not None:
-                    cur_word_start_time = cur_char_info["startTime"]
+                if cur_char_info["start_time"] is not None:
+                    cur_word_start_time = cur_char_info["start_time"]
                 else:
                     cur_word_start_time = last_recorded_time
 
             if self._is_word_end(prev_char, cur_char):
                 new_word_info = {
                     "word": cur_word,
-                    "startChar": cur_word_start_char_idx,
+                    "start_char": cur_word_start_char_idx,
                     # prev_char is the actual last char of this word but python
                     # slicing is non-inclusive so we use the index of cur_char (+1)
-                    "endChar": i,
-                    "startTime": cur_word_start_time,
-                    "endTime": cur_word_end_time,
+                    "end_char": i,
+                    "start_time": cur_word_start_time,
+                    "end_time": cur_word_end_time,
                     "speaker": None,
                 }
                 word_info.append(new_word_info)
@@ -701,13 +697,13 @@ class Transcription:
                 cur_word = ""
 
             # update char info
-            cur_char_info["wordIdx"] = cur_word_idx
+            cur_char_info["work_index"] = cur_word_idx
 
             # update word info
-            if cur_char_info["endTime"] is not None:
-                last_recorded_time = cur_char_info["endTime"]
-            elif cur_char_info["startTime"] is not None:
-                last_recorded_time = cur_char_info["startTime"]
+            if cur_char_info["end_time"] is not None:
+                last_recorded_time = cur_char_info["end_time"]
+            elif cur_char_info["start_time"] is not None:
+                last_recorded_time = cur_char_info["start_time"]
 
             cur_word_end_time = last_recorded_time
             cur_word += cur_char
@@ -716,12 +712,12 @@ class Transcription:
         # last word
         new_word_info = {
             "word": cur_word,
-            "startChar": cur_word_start_char_idx,
+            "start_char": cur_word_start_char_idx,
             # i is the actual last char index of this word but python
             # slicing is non-inclusive so we increment by 1
-            "endChar": i + 1,
-            "startTime": cur_word_start_time,
-            "endTime": cur_word_end_time,
+            "end_char": i + 1,
+            "start_time": cur_word_start_time,
+            "end_time": cur_word_end_time,
             "speaker": None,
         }
         word_info.append(new_word_info)
@@ -814,7 +810,7 @@ class Transcription:
             # nltk tokenizer doesn't include spaces in between sentences
             # need increment the char_idx by 1 for each sentence to account for this
             if char_info[cur_char_idx]["char"] == " ":
-                char_info[cur_char_idx]["sentenceIdx"] = i
+                char_info[cur_char_idx]["sentence_index"] = i
                 cur_char_idx += 1
 
             for j, sentence_char in enumerate(cur_sentence):
@@ -828,27 +824,27 @@ class Transcription:
                 # sentence start time and start index
                 if j == 0:
                     cur_sentence_start_char_idx = cur_char_idx
-                    if cur_char_info["startTime"] is not None:
-                        cur_sentence_start_time = cur_char_info["startTime"]
+                    if cur_char_info["start_time"] is not None:
+                        cur_sentence_start_time = cur_char_info["start_time"]
                     else:
                         cur_sentence_start_time = last_recorded_time
 
-                if cur_char_info["endTime"] is not None:
-                    last_recorded_time = cur_char_info["endTime"]
-                elif cur_char_info["startTime"] is not None:
-                    last_recorded_time = cur_char_info["startTime"]
+                if cur_char_info["end_time"] is not None:
+                    last_recorded_time = cur_char_info["end_time"]
+                elif cur_char_info["start_time"] is not None:
+                    last_recorded_time = cur_char_info["start_time"]
 
                 # update char_info
-                cur_char_info["sentenceIdx"] = i
+                cur_char_info["sentence_index"] = i
 
                 cur_char_idx += 1
 
             new_sentence_info = {
                 "sentence": cur_sentence,
-                "startChar": cur_sentence_start_char_idx,
-                "startTime": cur_sentence_start_time,
-                "endChar": cur_char_idx,
-                "endTime": last_recorded_time,
+                "start_char": cur_sentence_start_char_idx,
+                "start_time": cur_sentence_start_time,
+                "end_char": cur_char_idx,
+                "end_time": last_recorded_time,
             }
             sentence_info.append(new_sentence_info)
 
@@ -951,9 +947,7 @@ class Transcription:
         if end_time > self.end_time:
             err = (
                 "end_time ({} seconds) must be less than or equal to the transcript's "
-                "end time ({} seconds)".format(
-                    end_time, self.end_time
-                )
+                "end time ({} seconds)".format(end_time, self.end_time)
             )
             logging.error(err)
             raise TranscriptionError(err)

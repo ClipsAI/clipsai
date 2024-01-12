@@ -3,9 +3,13 @@ Exceptions that can be raised by the resize package.
 """
 
 
-class FaceNetMediaPipeResizerError(Exception):
+class ResizerError(Exception):
     pass
 
 
 class ImageProcessingError(Exception):
+    pass
+
+
+class VideoProcessingError(Exception):
     pass

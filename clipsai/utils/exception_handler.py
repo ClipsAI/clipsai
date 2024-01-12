@@ -5,8 +5,10 @@ Handles and extracts useful information from errors (Exceptions)
 import sys
 import traceback
 
+# current package imports
+from .exceptions import InvalidInputDataError
+
 # local package imports
-from clipsai.exceptions import InvalidInputDataError
 from clipsai.transcribe.exceptions import NoSpeechError
 
 

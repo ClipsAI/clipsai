@@ -3,11 +3,11 @@ Exceptions that can be raised by the transcribe package.
 """
 
 
-class WhisperXTranscriberConfigError(Exception):
+class TranscriberConfigError(Exception):
     pass
 
 
-class NoSpeechError(WhisperXTranscriberConfigError):
+class NoSpeechError(TranscriberConfigError):
     pass
 
 

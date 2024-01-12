@@ -1,12 +1,13 @@
 """
-Utilities for image processing.
+Utilities for video processing.
 """
 # standard library imports
 from concurrent.futures import ThreadPoolExecutor
 import logging
 
 # current package imports
-from .exceptions import ImageProcessingError
+from .exceptions import VideoProcessingError
+from .img_proc import rgb_to_gray
 
 # local imports
 from clipsai.media.video_file import VideoFile
@@ -15,24 +16,7 @@ from clipsai.media.video_file import VideoFile
 import av
 import cv2
 import numpy as np
-
-
-def rgb_to_gray(rgb_image: np.ndarray) -> np.ndarray:
-    """
-    Convert an RGB image to grayscale.
-
-    Parameters
-    ----------
-    rgb_image: np.ndarray
-        The RGB image to convert to grayscale.
-
-    Returns
-    -------
-    np.ndarray
-        The grayscale image.
-    """
-    rgb_to_gray = np.array([0.299, 0.587, 0.114])
-    return (rgb_image @ rgb_to_gray).astype(np.uint8)
+from scenedetect import detect, AdaptiveDetector
 
 
 def extract_frames(
@@ -66,7 +50,7 @@ def extract_frames(
                 extract_sec, duration
             )
             logging.error(err)
-            raise ImageProcessingError(err)
+            raise VideoProcessingError(err)
 
     # find all the frames to process
     container = av.open(video_file.path)
@@ -111,22 +95,34 @@ def extract_frames(
     return processed_frames
 
 
-def calc_img_bytes(width: int, height: int, channels: int) -> int:
+def detect_scenes(
+    video_file: VideoFile,
+    min_scene_duration: float = 0.25,
+) -> list[float]:
     """
-    Calculate the memory required to store a set of images.
+    Detect scene changes in a video.
 
     Parameters
     ----------
-    width: int
-        The width of the image.
-    height: int
-        The height of the image.
-    channels: int
-        The number of channels in the image.
+    video_file: VideoFile
+        The video file to detect scene changes in.
+    min_scene_duration: float
+        The minimum length of a scene in seconds.
 
     Returns
     -------
-    int
-        The number of bytes required to store the images.
+    scene_changes: list[float]
+        The seconds where scene changes occur.
     """
-    return width * height * channels
+    detector = AdaptiveDetector(
+        min_scene_len=min_scene_duration * video_file.get_frame_rate()
+    )
+    scene_list = detect(video_file.path, detector)
+
+    scene_changes = []
+    # don't include end time of last scene -> it's the end of the video
+    for i in range(len(scene_list) - 1):
+        scene = scene_list[i]
+        scene_changes.append(round(scene[1].get_seconds(), 6))
+
+    return scene_changes

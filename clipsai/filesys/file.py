@@ -69,6 +69,21 @@ class File(FileSystemObject):
         """
         return os.path.basename(self._path)
 
+    def get_filename_without_extension(self) -> str:
+        """
+        Returns the filename of the File without the extension.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        str
+            The filename of the File without the extension.
+        """
+        return os.path.splitext(self.get_filename())[0]
+
     def check_exists(self) -> str or None:
         """
         Checks that the File exists in the file system. Returns None if so, a

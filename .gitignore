@@ -176,6 +176,7 @@ pyrightconfig.json
 # Python virtual environments
 venv/
 env/
+dev-env/
 .venv/
 .env/
 
@@ -198,6 +199,7 @@ Dockerfile
 # Local Data
 data/
 clipsai/data
+test_files/
 
 # Ignore macOS system files
 .DS_Store

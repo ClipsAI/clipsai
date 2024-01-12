@@ -9,7 +9,3 @@ class ClipFinderError(Exception):
 
 class TextTilerError(ClipFinderError):
     pass
-
-
-class TextTileClipFinderError(TextTilerError):
-    pass
