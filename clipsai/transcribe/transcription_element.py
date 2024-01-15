@@ -81,6 +81,37 @@ class TranscriptionElement:
         """
         return self._text
 
+    def to_dict(self) -> dict:
+        """
+        Returns the attributes of the element as a dictionary.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        dict
+            The attributes of the element in a dictionary with the following keys:
+                start_time: float
+                    start time of the element in seconds
+                end_time: float
+                    end time of the element in seconds
+                start_char: int
+                    start character of the transcription of the element in the full text
+                end_char: int
+                    end character of the transcription of the element in the full text
+                text: str
+                    text of the element
+        """
+        return {
+            "start_time": self._start_time,
+            "end_time": self._end_time,
+            "start_char": self._start_char,
+            "end_char": self._end_char,
+            "text": self._text,
+        }
+
     def __str__(self) -> str:
         """
         Returns a string representation of the element.
@@ -143,9 +174,9 @@ class Sentence(TranscriptionElement):
         end_time: float
             The end time of the sentence in seconds.
         start_char: int
-            The start character in the transcription of the sentence.
+            The index of the sentence's start character in the full text
         end_char: int
-            The end character in the transcription of the sentence.
+            The index of the sentence's end character in the full text
         text: str
             The text of the sentence.
         """
@@ -183,9 +214,9 @@ class Word(TranscriptionElement):
         end_time: float
             The end time of the word in seconds.
         start_char: int
-            The start character in the transcription of the word.
+            The index of the word's start character in the full text
         end_char: int
-            The end character in the transcription of the word.
+            The index of the word's end character in the full text
         text: str
             The text of the word.
         """
@@ -270,6 +301,38 @@ class Character:
         Returns the text of the character.
         """
         return self._text
+
+    def to_dict(self) -> dict:
+        """
+        Returns the attributes of the element as a dictionary.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        dict
+            The attributes of the element in a dictionary with the following keys:
+                start_time: float
+                    start time of the element in seconds
+                end_time: float
+                    end time of the element in seconds
+                word_index: int
+                    index of the word in the transcription that contains this character
+                sentence_index: int
+                    index of the sentence in the transcription that contains this
+                    character
+                text: str
+                    text of the element
+        """
+        return {
+            "start_time": self._start_time,
+            "end_time": self._end_time,
+            "word_index": self._word_index,
+            "sentence_index": self._sentence_index,
+            "text": self._text,
+        }
 
     def __str__(self) -> str:
         """

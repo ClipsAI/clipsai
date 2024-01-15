@@ -44,9 +44,9 @@ class ClipFinder:
             PyTorch device to perform computations on. Ex: 'cpu', 'cuda'. Default is
             None (auto detects the correct device)
         min_clip_duration: int
-            minimum clip length for a clip to be created
+            Minimum duration in seconds for a clip
         max_clip_duration: int
-            max clip length for a clip to be created
+            Maximum duration in seconds for a clip
         cutoff_policy: str
             The policy used to determine how dissimilar adjacent embedding windows must
             be to consider them to be from different segments (a boundary).
@@ -90,7 +90,7 @@ class ClipFinder:
         transcription: Transcription,
     ) -> list[Clip]:
         """
-        Finds clips within some audio transcription using the TextTiling Algorithm
+        Finds clips in an audio file's transcription using the TextTiling Algorithm.
 
         Parameters
         ----------

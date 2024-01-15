@@ -74,35 +74,35 @@ class Transcription:
     @property
     def source_software(self) -> str:
         """
-        Returns the name of the software used to transcribe the audio
+        The software used for transcribing.
         """
         return self._source_software
 
     @property
     def created_time(self) -> datetime:
         """
-        Returns the time the transcription was created
+        The time when the transcription was created.
         """
         return self._created_time
 
     @property
     def language(self) -> str:
         """
-        Returns the language of the transcription.
+        The ISO 639-1 language code of the transcription's language.
         """
         return self._language
 
     @property
     def start_time(self) -> float:
         """
-        Returns the start time of the transcript in seconds.
+        The start time of the transcript in seconds.
         """
         return 0.0
 
     @property
     def end_time(self) -> float:
         """
-        Returns the end time of the transcript in seconds.
+        The end time of the transcript in seconds.
         """
         char_info = self.get_char_info()
         for i in range(len(char_info) - 1, -1, -1):
@@ -114,15 +114,15 @@ class Transcription:
     @property
     def text(self) -> str:
         """
-        Returns the full text of the transcription
+        The full textual content of the transcription.
         """
         return self._text
 
     @property
     def characters(self) -> list[Character]:
         """
-        Returns a list of characters from the text. The characters are represented as
-        Character objects. The list is ordered by the start time of the characters.
+        A list of characters from the text as Character objects and ordered by start
+        time.
         """
         chars = []
         for char_info in self.get_char_info():
@@ -140,8 +140,7 @@ class Transcription:
     @property
     def words(self) -> list[Word]:
         """
-        Returns a list words from the text. The words are represented as Word objects.
-        The lis is ordered by the start time of the words.
+        A list of words from the text as Word objects and ordered by start time.
         """
         words = []
         for word_info in self.get_word_info():
@@ -159,8 +158,7 @@ class Transcription:
     @property
     def sentences(self) -> list[Sentence]:
         """
-        Returns a list of sentences from the text. The sentences are represented as
-        Sentence objects. The list is ordered by the start time of the sentences.
+        A list of sentences from the text as Sentence objects and ordered by start time.
         """
         sentences = []
         for sentence_info in self.get_sentence_info():
@@ -311,12 +309,11 @@ class Transcription:
         ----------
         target_time: float
             The time in seconds to search for.
-        type_of_time: str
-            A string that specifies the type of time we're searching for.
-            If 'start', the function returns the index of word with the closest start
-            time before 'target_time'.
-            If 'end', the function returns the index of the word with the closest end
-            time after target time.
+        type_of_time: start | end
+            start: returns the index of the word with the closest start time before
+            target_time.
+            end: returns the index of the word with the closest end time after target
+            time.
 
         Returns
         -------
@@ -334,12 +331,11 @@ class Transcription:
         ----------
         target_time: float
             The time in seconds to search for.
-        type_of_time: str
-            A string that specifies the type of time we're searching for.
-            If 'start', the function returns the index of sentence with the closest
-            start time before 'target_time'.
-            If 'end', the function returns the index of the sentence with the closest
-            end time after target time.
+        type_of_time: start | end
+            start: returns the index of the sentence with the closest start time before
+            target_time.
+            end: returns the index of the sentence with the closest end time after
+            target time.
 
         Returns
         -------

@@ -42,12 +42,14 @@ class Transcriber:
         Parameters
         ----------
         model_size: str
-            One of the model sizes implemented by whisper/whisperx
+            One of the model sizes implemented by whisper/whisperx. Default is None,
+            which selects large-v2 if cuda is available and tiny if not (cpu).
         device: str
-            PyTorch device to perform computations on. Ex: 'cpu', 'cuda'. Default is
-            None (auto detects the correct device)
+            PyTorch device to perform computations on. Default is None, which auto
+            detects the correct device.
         precision: 'float16' | 'int8'
-            Precision to perform prediction with
+            Precision to perform prediction with. Default is None, which selects
+            float16 if cuda is available and int8 if not (cpu).
         """
         self._config_manager = TranscriberConfigManager()
         self._type_checker = TypeChecker()
@@ -85,9 +87,10 @@ class Transcriber:
         Parameters
         ----------
         audio_file_path: str
-            absolute path to the audio file to transcribe
+            Absolute path to the audio or video file to transcribe.
         iso6391_lang_code: str or None
-            ISO 639-1 language code to transcribe in
+            ISO 639-1 language code to transcribe the media in. Default is None, which
+            autodetects the media's language.
         batch_size: int = 16
             reduce if low in GPU memory (not actually sure what it does though -Ben)
         Returns
