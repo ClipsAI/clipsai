@@ -44,7 +44,7 @@ print("StartTime: ", clips[0].start_time)
 print("EndTime: ", clips[0].end_time)
 ```
 
-To trim the video using the returned **clips**, you'll first need to [install ffmpeg](https://ffmpeg.org/download.html) ([Windows](https://www.gyan.dev/ffmpeg/builds/) | [MacOS](https://formulae.brew.sh/formula/ffmpeg)). Note that this is command line tool, *not* a python library. Once done, simply run the following code.
+To trim the video using the returned **clips**, you'll first need to [install ffmpeg](https://github.com/kkroening/ffmpeg-python/tree/master?tab=readme-ov-file#installing-ffmpeg). Note that this is command line tool, *not* a python library. Once done, simply run the following code.
 
 ```python
 media_editor = clipsai.MediaEditor()
@@ -81,7 +81,7 @@ crops = resize(
 print("Crops: ", crops.segments)
 ```
 
-To actually resize the video using the returned **crops**, you'll first need to [install ffmpeg](https://ffmpeg.org/download.html) ([Windows](https://www.gyan.dev/ffmpeg/builds/) | [MacOS](https://formulae.brew.sh/formula/ffmpeg)). Note that this is a command line tool, *not* a python library. Once done, simply run the following code.
+To actually resize the video using the returned **crops**, you'll first need to [install ffmpeg](https://github.com/kkroening/ffmpeg-python/tree/master?tab=readme-ov-file#installing-ffmpeg). Note that this is a command line tool, *not* a python library. Once done, simply run the following code.
 
 ```python
 media_editor = clipsai.MediaEditor()
