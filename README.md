@@ -25,6 +25,8 @@ pip install clipsai
 pip install whisperx@git+https://github.com/m-bain/whisperx.git
 ```
 
+Install [libmagic](https://man7.org/linux/man-pages/man3/libmagic.3.html): [Debian/Ubuntu](https://github.com/ahupp/python-magic?tab=readme-ov-file#debianubuntu) | [Windows](https://github.com/ahupp/python-magic?tab=readme-ov-file#windows) | [MacOS](https://github.com/ahupp/python-magic?tab=readme-ov-file#osx)
+
 ## Creating clips
 
 Since clips are found using the video's transcript, the video must first be transcribed. Transcribing is done with [WhisperX](https://github.com/m-bain/whisperX), an open-source wrapper on [Whisper](https://github.com/openai/whisper) with additional functionality for detecting start and stop times for each word.
@@ -42,7 +44,7 @@ print("StartTime: ", clips[0].start_time)
 print("EndTime: ", clips[0].end_time)
 ```
 
-To actually trim the video using the returned **clips**, you'll first need to install [ffmpeg](https://ffmpeg.org/) and possibly [libmagic](https://man7.org/linux/man-pages/man3/libmagic.3.html) as well. Note that these are command line libraries, *not* python libraries. Once done, simply run the following code.
+To trim the video using the returned **clips**, you'll first need to [install ffmpeg](https://ffmpeg.org/download.html) ([Windows](https://www.gyan.dev/ffmpeg/builds/) | [MacOS](https://formulae.brew.sh/formula/ffmpeg)). Note that this is command line tool, *not* a python library. Once done, simply run the following code.
 
 ```python
 media_editor = clipsai.MediaEditor()
@@ -79,7 +81,7 @@ crops = resize(
 print("Crops: ", crops.segments)
 ```
 
-To actually resize the video using the returned **crops**, you'll first need to install [ffmpeg](https://ffmpeg.org/) and possibly [libmagic](https://man7.org/linux/man-pages/man3/libmagic.3.html) as well. Note that these are command line libraries, *not* python libraries. Once done, simply run the following code.
+To actually resize the video using the returned **crops**, you'll first need to [install ffmpeg](https://ffmpeg.org/download.html) ([Windows](https://www.gyan.dev/ffmpeg/builds/) | [MacOS](https://formulae.brew.sh/formula/ffmpeg)). Note that this is a command line tool, *not* a python library. Once done, simply run the following code.
 
 ```python
 media_editor = clipsai.MediaEditor()
