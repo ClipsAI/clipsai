@@ -1,0 +1,53 @@
+\begin{thebibliography}{10}
+
+\bibitem{Plaquet23}
+Alexis Plaquet and Hervé Bredin,
+\newblock ``{Powerset multi-class cross entropy loss for neural speaker diarization},''
+\newblock in {\em Proc. INTERSPEECH 2023}, 2023.
+
+\bibitem{Bredin23}
+Hervé Bredin,
+\newblock ``{pyannote.audio 2.1 speaker diarization pipeline: principle, benchmark, and recipe},''
+\newblock in {\em Proc. INTERSPEECH 2023}, 2023.
+
+\bibitem{PySceneDetect}
+Breakthrough,
+\newblock ``Pyscenedetect,'' 2014.
+
+\bibitem{FacenetPyTorch}
+Tim Esler,
+\newblock ``Face recognition using pytorch,'' 2019.
+
+\bibitem{Facenet}
+Florian Schroff, Dmitry Kalenichenko, and James Philbin,
+\newblock ``Facenet: A unified embedding for face recognition and clustering,''
+\newblock in {\em 2015 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 2015, pp. 815--823.
+
+\bibitem{VGGFace2}
+Qiong Cao, Li~Shen, Weidi Xie, Omkar~M. Parkhi, and Andrew Zisserman,
+\newblock ``Vggface2: A dataset for recognising faces across pose and age,''
+\newblock in {\em 2018 13th IEEE International Conference on Automatic Face and Gesture Recognition (FG 2018)}, 2018, pp. 67--74.
+
+\bibitem{FaceRepresentation}
+Dong Yi, Zhen Lei, Shengcai Liao, and Stan~Z. Li,
+\newblock ``Learning face representation from scratch,'' 2014.
+
+\bibitem{CascadedConvolution}
+Kaipeng Zhang, Zhanpeng Zhang, Zhifeng Li, and Yu~Qiao,
+\newblock ``Joint face detection and alignment using multitask cascaded convolutional networks,''
+\newblock {\em IEEE Signal Processing Letters}, vol. 23, no. 10, pp. 1499--1503, 2016.
+
+\bibitem{FacenetTensorFlow}
+David Sandberg,
+\newblock ``Face recognition using tensorflow,'' 2017.
+
+\bibitem{MediaPipe}
+Google,
+\newblock ``Mediapipe,'' 2019.
+
+\bibitem{MAR}
+Tianjun Zhu, Chuang Zhang, Tunglung Wu, Zhuang Ouyang, Houzhi Li, Xiaoxiang Na, Jianguo Liang, and Weihao Li,
+\newblock ``Research on a real-time driver fatigue detection algorithm based on facial video sequences,''
+\newblock {\em Applied Sciences}, vol. 12, no. 4, 2022.
+
+\end{thebibliography}
