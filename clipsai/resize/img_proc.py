@@ -1,7 +1,11 @@
-"""
-Utilities for image processing.
-"""
-import numpy as np
+"""Utilities for image processing."""
+
+from __future__ import annotations
+
+try:  # pragma: no cover - optional dependency
+    import numpy as np
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    np = None  # type: ignore
 
 
 def rgb_to_gray(rgb_image: np.ndarray) -> np.ndarray:

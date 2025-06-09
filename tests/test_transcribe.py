@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from datetime import datetime
 
 from clipsai.filesys.json_file import JSONFile
@@ -8,7 +8,7 @@ from clipsai.media.audiovideo_file import AudioVideoFile
 from clipsai.media.editor import MediaEditor
 from clipsai.media.exceptions import MediaEditorError
 from clipsai.transcribe.exceptions import TranscriptionError
-from clipsai.transcribe.transcriber import TranscriberConfigManager
+from clipsai.transcribe.transcriber import TranscriberConfigManager, Transcriber
 from clipsai.transcribe.transcription import Transcription
 
 
@@ -159,3 +159,33 @@ def test_invalid_times_exception():
     transcription = Transcription(valid_transcription_data)
     with pytest.raises(TranscriptionError):
         transcription.get_char_info(start_time=-1, end_time=5)
+
+
+@patch("clipsai.transcribe.transcriber.whisperx", new_callable=Mock)
+def test_transcribe_short_duration_raises(mock_whisperx):
+    mock_whisperx.load_model.return_value = Mock()
+    transcriber = Transcriber()
+    fake_media = Mock()
+    fake_media.path = "fake.mp3"
+    fake_media.get_duration.return_value = 100.0
+    fake_media.assert_exists = Mock(return_value=None)
+    fake_media.assert_has_audio_stream = Mock(return_value=None)
+    with patch("clipsai.transcribe.transcriber.MediaEditor") as mock_editor:
+        mock_editor.return_value.instantiate_as_temporal_media_file.return_value = fake_media
+        with pytest.raises(ValueError):
+            transcriber.transcribe("fake.mp3")
+
+
+@patch("clipsai.transcribe.transcriber.whisperx", new_callable=Mock)
+def test_transcribe_long_duration_raises(mock_whisperx):
+    mock_whisperx.load_model.return_value = Mock()
+    transcriber = Transcriber()
+    fake_media = Mock()
+    fake_media.path = "fake_long.mp3"
+    fake_media.get_duration.return_value = 8000.0
+    fake_media.assert_exists = Mock(return_value=None)
+    fake_media.assert_has_audio_stream = Mock(return_value=None)
+    with patch("clipsai.transcribe.transcriber.MediaEditor") as mock_editor:
+        mock_editor.return_value.instantiate_as_temporal_media_file.return_value = fake_media
+        with pytest.raises(ValueError):
+            transcriber.transcribe("fake_long.mp3")

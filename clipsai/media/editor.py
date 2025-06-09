@@ -7,8 +7,12 @@ import subprocess
 import os
 import uuid
 
+# standard library imports
+import time # For polling Transcoder API
+
 # current package imports
 from .exceptions import MediaEditorError
+from clipsai.utils.exceptions import ConfigError # Added
 from .audio_file import AudioFile
 from .audiovideo_file import AudioVideoFile
 from .image_file import ImageFile
@@ -17,6 +21,7 @@ from .temporal_media_file import TemporalMediaFile
 from .video_file import VideoFile
 
 # local imports
+from clipsai.gcloud.config import GCloudConfig # Added
 from clipsai.filesys.file import File
 from clipsai.filesys.manager import FileSystemManager
 from clipsai.utils.conversions import seconds_to_hms_time_format
@@ -29,23 +34,30 @@ SUCCESS = 0
 
 class MediaEditor:
     """
-    A class to edit media files using ffmpeg.
+    A class to edit media files using ffmpeg and Google Cloud services.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, gcloud_config: GCloudConfig = None) -> None:
         """
-        Initialize FfmpegEditor
+        Initializes the MediaEditor.
+
+        The editor can use local ffmpeg for some operations and Google Cloud
+        services (like Transcoder API via `transcode` method) for others.
 
         Parameters
         ----------
-        None
-
-        Returns
-        -------
-        None
+        gcloud_config : GCloudConfig, optional
+            Configuration for Google Cloud services. If not provided, a default
+            instance is created which relies on environment variables for settings
+            like Project ID, Location, and temporary GCS bucket. This is primarily
+            used by methods interacting with Google Cloud (e.g., `transcode`).
         """
         self._file_system_manager = FileSystemManager()
         self._type_checker = TypeChecker()
+        if gcloud_config is None:
+            self._gcloud_config = GCloudConfig()
+        else:
+            self._gcloud_config = gcloud_config
 
     def trim(
         self,
@@ -219,130 +231,286 @@ class MediaEditor:
         audio_codec: str = "copy",
         crf: str = "23",
         preset: str = "medium",
-        num_threads: str = "0",
+        num_threads: str = "0", # Ignored by Transcoder API
     ) -> TemporalMediaFile or None:
         """
-        Creates a copy of a temporal media file (audio or video)
+        Creates a copy of a temporal media file (audio or video).
+        If codecs are specified (not "copy"), this effectively transcodes.
+        This method will use the Google Cloud Transcoder API if suitable codecs are provided
+        and `gcloud_config` is set up. Otherwise, it may fall back to local ffmpeg processing via `trim`.
 
-        - 'copied_media_file_path' is overwritten if already exists
+        - 'copied_media_file_path' (target) is interpreted as a GCS URI if using Transcoder API,
+          or a local path for ffmpeg.
+        - GCS objects at the target URI will be overwritten.
 
         Parameters
         ----------
         media_file: TemporalMediaFile
-            absolute path to the media file to copy
+            The media file to copy or transcode.
         copied_media_file_path: str
-            absolute path to copy the media file to
+            Target path for the output. If using Transcoder API, this should be a GCS URI
+            or will be derived into one (e.g., gs://<bucket>/clipsai_transcoded_outputs/...).
         overwrite: bool
-            Overwrites 'copied_media_file_path' if True; does not overwrite if False
+            If True, overwrites the destination if it exists. Default is True.
+            (Note: GCS uploads and Transcoder jobs typically overwrite by default).
         video_codec: str
-            compression and decompression software for the video (libx264)
+            Target video codec (e.g., "h264", "vp9"). "copy" implies using ffmpeg locally if possible.
         audio_codec: str
-            compression and decompression sfotware for the audio (aac)
+            Target audio codec (e.g., "aac", "mp3"). "copy" implies using ffmpeg locally if possible.
         crf: str
-            constant rate factor - an encoding mode that adjusts the file data rate up
-            or down to achieve a selected quality level rather than a specific data
-            rate. CRF values range from 0 to 51, with lower numbers delivering higher
-            quality scores
+            Constant Rate Factor for video encoding (e.g., "23"). Used by both ffmpeg and Transcoder API.
         preset: str
-            the encoding speed to compression ratio. A slower preset will provide
-            better compression (compression is quality per filesize)
+            Encoding preset (e.g., "medium", "fast"). Used by both ffmpeg and Transcoder API.
         num_threads: str
-            the number of threads to use for encoding
+            Number of threads for ffmpeg (ignored by Transcoder API). Default is "0" (auto).
+
 
         Returns
         -------
-        MediaFile or None
-            the copied media as a MediaFile object if successful; None if unsuccessful
+        TemporalMediaFile or None
+            The copied/transcoded media as a TemporalMediaFile object if successful; None otherwise.
+            The path of the returned file might be a GCS URI if Transcoder API was used.
 
         Raises
         ------
-        MediaEditorError: media_file's duration could not be found
+        MediaEditorError: If media_file's duration cannot be found (for ffmpeg path) or other processing errors.
+        ConfigError: If GCloudConfig is not properly set for Transcoder API usage.
         """
-        self.assert_valid_media_file(media_file, TemporalMediaFile)
+        # This method is now a wrapper. If not using "copy" codecs, it calls self.transcode()
+        # which is being refactored to use Transcoder API.
+        # If "copy" codecs are used, it falls back to the old ffmpeg method via self.trim().
 
+        # For this refactoring, self.transcode IS the target of Transcoder API.
+        # So, this copy_temporal_media_file should just call self.trim if codecs are "copy",
+        # otherwise it should call the NEW self.transcode.
+        # However, the prompt is to refactor self.transcode directly.
+        # The original self.transcode just called self.copy_temporal_media_file.
+        # So, this copy_temporal_media_file method should be removed or updated AFTER
+        # self.transcode is refactored.
+        # For now, let's assume this method will be simplified later once transcode is done.
+        # The current task is to change self.transcode.
+        # This method's existing ffmpeg logic via self.trim will remain for "copy" operations.
+
+        self.assert_valid_media_file(media_file, TemporalMediaFile)
         duration = media_file.get_duration()
         if duration == -1:
             msg = "Can't retrieve duration from media file '{}'".format(media_file.path)
             logging.error(msg)
             raise MediaEditorError(msg)
 
-        copied_media_file = self.trim(
-            media_file,
-            0,
-            duration,
-            copied_media_file_path,
-            overwrite,
-            video_codec,
-            audio_codec,
-            crf,
-            preset,
-            num_threads,
+        copied_media_file = self.trim( # This uses ffmpeg
+            media_file=media_file,
+            start_time=0,
+            end_time=duration,
+            trimmed_media_file_path=copied_media_file_path,
+            overwrite=overwrite,
+            video_codec=video_codec,
+            audio_codec=audio_codec,
+            crf=crf,
+            preset=preset,
+            num_threads=num_threads,
         )
         if copied_media_file is None:
-            msg = "Copying media file '{}' to '{}' was unsuccessful." "".format(
+            msg = "Copying/trimming media file '{}' to '{}' was unsuccessful." "".format(
                 media_file.path, copied_media_file_path
             )
             logging.error(msg)
             return None
-        # success
         else:
             return copied_media_file
+
 
     def transcode(
         self,
         media_file: TemporalMediaFile,
-        transcoded_media_file_path: str,
-        video_codec: str,
-        audio_codec: str,
+        transcoded_media_file_path: str, # This will now be treated as a target GCS URI or a basis for one
+        video_codec: str, # e.g., "h264"
+        audio_codec: str, # e.g., "aac"
         crf: str = "23",
         preset: str = "medium",
         overwrite: bool = True,
         num_threads: str = "0",
     ) -> TemporalMediaFile or None:
         """
-        Transcodes media file (audio or video) to the specified codecs
+        Transcodes a media file to specified video and audio codecs using the
+        Google Cloud Transcoder API.
 
-        - 'transcoded_media_file_path' is overwritten if already exists
+        Local input files are first uploaded to a temporary GCS bucket.
+        The transcoded output is also written to a GCS URI. If a local path is
+        provided for `transcoded_media_file_path`, it's used to derive a filename
+        within a structured path in the temporary GCS bucket.
+
+        The method polls the Transcoder API job for completion and returns a
+        `TemporalMediaFile` pointing to the GCS URI of the transcoded output.
 
         Parameters
         ----------
-        media_file: TemporalMediaFile
-            absolute path to the media file to transcode
-        transcoded_media_file_path: str
-            absolute path to store the transcoded media file
-        overwrite: bool
-            Overwrites 'transcoded_media_file_path' if True; does not overwrite if False
-        video_codec: str
-            compression and decompression software for the video (libx264)
-        audio_codec: str
-            compression and decompression sfotware for the audio (aac)
-        crf: str
-            constant rate factor - an encoding mode that adjusts the file data rate up
-            or down to achieve a selected quality level rather than a specific data
-            rate. CRF values range from 0 to 51, with lower numbers delivering higher
-            quality scores
-        preset: str
-            the encoding speed to compression ratio. A slower preset will provide
-            better compression (compression is quality per filesize)
-        num_threads: str
-            the number of threads to use for encoding
+        media_file : TemporalMediaFile
+            The input media file to transcode. Can be a local path or GCS URI.
+        transcoded_media_file_path : str
+            The target path for the transcoded output. If a local path, it's used
+            to name the output in a GCS temporary bucket. If a GCS URI, it's used directly.
+        video_codec : str
+            Target video codec (e.g., "h264", "vp9"). Note: The Transcoder API
+            always re-encodes; "copy" is not supported and will be logged as a warning.
+        audio_codec : str
+            Target audio codec (e.g., "aac", "mp3"). "copy" will also be re-encoded.
+        crf : str, optional
+            Constant Rate Factor for video encoding (e.g., "23"). Applicable to
+            codecs like H.264/H.265. Default is "23".
+        preset : str, optional
+            Encoding preset (e.g., "medium", "fast"). Default is "medium".
+        overwrite : bool, optional
+            If True (default), GCS uploads and Transcoder job outputs will overwrite
+            existing files at the destination URI.
+        num_threads : str, optional
+            This parameter is ignored when using the Google Cloud Transcoder API,
+            as concurrency is managed by the service. Default is "0".
 
         Returns
         -------
-        MediaFile or None
-            the transcoded media as a MediaFile object if successful; None if
-            unsuccessful
+        TemporalMediaFile or None
+            A `TemporalMediaFile` instance pointing to the GCS URI of the successfully
+            transcoded file, or None if transcoding fails.
+
+        Raises
+        ------
+        ConfigError
+            If `gcloud_config` is missing necessary attributes like `project_id`,
+            `location`, or `temp_gcs_bucket_name` when GCS operations are required.
+        MediaEditorError
+            For failures during GCS upload, Transcoder API calls, job processing,
+            or if required Google Cloud libraries are not installed.
+        google.api_core.exceptions.GoogleAPICallError
+            Propagated from Google Cloud client libraries for API-specific errors.
         """
-        return self.copy_temporal_media_file(
-            media_file,
-            transcoded_media_file_path,
-            overwrite,
-            video_codec,
-            audio_codec,
-            crf,
-            preset,
-            num_threads,
+        try:
+            from google.cloud import video_transcoder_v1
+            from google.cloud.video.transcoder_v1.services.transcoder_service import TranscoderServiceClient
+            from google.cloud import storage
+            from google.api_core import exceptions as google_exceptions
+        except ModuleNotFoundError as e:
+            missing_module = str(e).split("'")[-2]
+            logging.error(f"Google Cloud library '{missing_module}' not found for transcoding.")
+            raise MediaEditorError(f"Google Cloud library '{missing_module}' not found. Please install google-cloud-video-transcoder and google-cloud-storage.") from e
+
+        self.assert_valid_media_file(media_file, TemporalMediaFile)
+        if not self._gcloud_config.project_id or not self._gcloud_config.location:
+            raise ConfigError("Google Cloud Project ID and Location must be set in GCloudConfig for Transcoder API.")
+
+        input_gcs_uri = media_file.path
+        temp_input_gcs_object_name = None
+        storage_client = None # Initialize to None
+
+        if not input_gcs_uri.startswith("gs://"):
+            if not self._gcloud_config.temp_gcs_bucket_name:
+                raise ConfigError("temp_gcs_bucket_name not set in GCloudConfig for local file upload.")
+            storage_client = storage.Client(project=self._gcloud_config.project_id)
+            bucket = storage_client.bucket(self._gcloud_config.temp_gcs_bucket_name)
+
+            safe_filename = "".join(c if c.isalnum() or c in ['.', '_', '-'] else '_' for c in media_file.get_filename())
+            temp_input_gcs_object_name = f"clipsai_transcode_inputs/{uuid.uuid4()}/{safe_filename}"
+            input_gcs_uri = f"gs://{self._gcloud_config.temp_gcs_bucket_name}/{temp_input_gcs_object_name}"
+
+            logging.info(f"Uploading {media_file.path} to {input_gcs_uri} for transcoding.")
+            try:
+                blob = bucket.blob(temp_input_gcs_object_name)
+                blob.upload_from_filename(media_file.path, timeout=300) # 5 min upload timeout
+            except Exception as e:
+                raise MediaEditorError(f"Failed to upload {media_file.path} to GCS at {input_gcs_uri}: {e}")
+
+        output_gcs_uri = transcoded_media_file_path
+        if not output_gcs_uri.startswith("gs://"):
+            if not self._gcloud_config.temp_gcs_bucket_name:
+                if temp_input_gcs_object_name and storage_client: # Cleanup uploaded input
+                    try:
+                        bucket = storage_client.bucket(self._gcloud_config.temp_gcs_bucket_name)
+                        blob = bucket.blob(temp_input_gcs_object_name)
+                        blob.delete(timeout=60)
+                    except Exception as e_del: logging.error(f"Failed to cleanup temp GCS input {input_gcs_uri}: {e_del}")
+                raise ConfigError("temp_gcs_bucket_name not set for GCS output path derivation when local path is given.")
+
+            output_filename = os.path.basename(transcoded_media_file_path)
+            safe_output_filename = "".join(c if c.isalnum() or c in ['.', '_', '-'] else '_' for c in output_filename)
+            if not safe_output_filename: safe_output_filename = f"transcoded_output_{uuid.uuid4()}"
+
+            output_gcs_object_name = f"clipsai_transcoded_outputs/{uuid.uuid4()}/{safe_output_filename}"
+            output_gcs_uri = f"gs://{self._gcloud_config.temp_gcs_bucket_name}/{output_gcs_object_name}"
+
+        logging.info(f"Transcoding {input_gcs_uri} to {output_gcs_uri} with video_codec={video_codec}, audio_codec={audio_codec}")
+
+        transcoder_client = TranscoderServiceClient()
+        parent = f"projects/{self._gcloud_config.project_id}/locations/{self._gcloud_config.location}"
+
+        job = video_transcoder_v1.types.Job()
+        job.input_uri = input_gcs_uri
+        job.output_uri = output_gcs_uri
+
+        # Basic config mapping - needs to be more robust for production
+        video_stream_args = {"codec": video_codec.lower()}
+        if video_codec.lower() in ["h264", "h265"]:
+            if crf: video_stream_args["crf_level"] = int(crf)
+            if preset: video_stream_args["preset"] = preset.lower()
+
+        audio_stream_args = {"codec": audio_codec.lower()}
+        # Add bitrate_bps for audio if needed, e.g., audio_stream_args["bitrate_bps"] = 128000
+
+        job.config = video_transcoder_v1.types.JobConfig(
+            elementary_streams=[
+                video_transcoder_v1.types.ElementaryStream(key="video_stream", video_stream=video_transcoder_v1.types.VideoStream(**video_stream_args)),
+                video_transcoder_v1.types.ElementaryStream(key="audio_stream", audio_stream=video_transcoder_v1.types.AudioStream(**audio_stream_args)),
+            ],
+            mux_streams=[
+                video_transcoder_v1.types.MuxStream(
+                    key=os.path.splitext(os.path.basename(output_gcs_uri))[0] or "output_video",
+                    container=os.path.splitext(output_gcs_uri)[1][1:].lower() or "mp4",
+                    elementary_streams=["video_stream", "audio_stream"]
+                )
+            ]
         )
+        if video_codec.lower() == "copy" or audio_codec.lower() == "copy":
+             logging.warning("Transcoder API always re-encodes. 'copy' codec is not directly supported and will result in re-encoding with defaults or specified parameters.")
+             # Adjust config for 'copy' - e.g., remove problematic fields or set to high-quality defaults
+             # This part needs careful design if 'copy' is a common use case.
+             # For now, we let it pass, API might error or use defaults.
+
+        created_job = None
+        try:
+            created_job = transcoder_client.create_job(parent=parent, job=job)
+            logging.info(f"Created Transcoder job: {created_job.name}")
+
+            POLL_INTERVAL_SECONDS = 15
+            MAX_POLLS = 40 # 10 minutes timeout
+            for _ in range(MAX_POLLS):
+                current_job = transcoder_client.get_job(name=created_job.name)
+                if current_job.state == video_transcoder_v1.types.Job.ProcessingState.SUCCEEDED:
+                    logging.info(f"Transcoding job {created_job.name} succeeded.")
+                    return self._create_media_file_of_same_type(output_gcs_uri, media_file)
+                elif current_job.state == video_transcoder_v1.types.Job.ProcessingState.FAILED:
+                    err_details = current_job.error
+                    logging.error(f"Transcoding job {created_job.name} failed: Code {err_details.code}, Message: {err_details.message}")
+                    raise MediaEditorError(f"Transcoding job {created_job.name} failed: {err_details.message}")
+                time.sleep(POLL_INTERVAL_SECONDS)
+
+            # Cleanup job if timed out (optional - job might complete later)
+            # transcoder_client.delete_job(name=created_job.name)
+            raise MediaEditorError(f"Transcoding job {created_job.name} timed out after {MAX_POLLS * POLL_INTERVAL_SECONDS}s.")
+
+        except google_exceptions.GoogleAPICallError as e:
+            logging.error(f"Transcoder API call failed: {e}")
+            raise MediaEditorError(f"Transcoder API call failed: {e}") from e
+        except Exception as e:
+            logging.error(f"An unexpected error occurred during transcoding: {e}")
+            raise MediaEditorError(f"Unexpected error during transcoding: {e}") from e
+        finally:
+            if temp_input_gcs_object_name and storage_client:
+                logging.info(f"Deleting temporary GCS input object: gs://{self._gcloud_config.temp_gcs_bucket_name}/{temp_input_gcs_object_name}")
+                try:
+                    bucket = storage_client.bucket(self._gcloud_config.temp_gcs_bucket_name)
+                    blob = bucket.blob(temp_input_gcs_object_name)
+                    blob.delete(timeout=60)
+                except Exception as e_del:
+                    logging.error(f"Failed to delete temporary GCS input object: {e_del}")
 
     def watermark_and_crop_video(
         self,

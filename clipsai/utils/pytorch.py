@@ -1,6 +1,6 @@
-"""
-Utility functions for PyTorch.
-"""
+"""Utility functions for PyTorch."""
+
+from __future__ import annotations
 # standard package imports
 import logging
 import random
@@ -9,8 +9,14 @@ import random
 from .exceptions import InvalidComputeDeviceError
 
 # 3rd party imports
-import psutil
-import pynvml
+try:  # pragma: no cover - optional dependency
+    import psutil
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    psutil = None  # type: ignore
+try:  # pragma: no cover - optional dependency
+    import pynvml
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    pynvml = None  # type: ignore
 import torch
 
 

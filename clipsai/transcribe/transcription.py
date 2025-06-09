@@ -22,15 +22,22 @@ from clipsai.filesys.manager import FileSystemManager
 from clipsai.utils.type_checker import TypeChecker
 
 # 3rd party imports
-import nltk
-from nltk.tokenize import sent_tokenize
-
-nltk.download("punkt")
+try:  # pragma: no cover - optional dependency
+    import nltk
+    from nltk.tokenize import sent_tokenize
+    nltk.download("punkt")
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    nltk = None  # type: ignore
+    def sent_tokenize(text: str):  # type: ignore
+        return [text]
 
 
 class Transcription:
     """
-    A class for whisperx transcription data viewing, storage, and manipulation.
+    A class for transcription data viewing, storage, and manipulation.
+    It is designed to handle data primarily from Google Cloud Speech-to-Text,
+    including character-level information with speaker tags and interpolated timings.
+    Character timings are interpolated from word timings provided by the STT API.
     """
 
     def __init__(
@@ -43,8 +50,9 @@ class Transcription:
         Parameters
         ----------
         transcription: dict or JSONFile
-            - a dictionary object containing whisperx transcription
-            - a JSONFile containing a whisperx transcription
+            - A dictionary object containing transcription data, typically from
+              Google Cloud Speech-to-Text (see `Transcriber.transcribe` for format).
+            - A JSONFile containing such transcription data.
 
         Returns
         -------
@@ -276,6 +284,162 @@ class Transcription:
             start_index = self.find_sentence_index(start_time, type_of_time="start")
             end_index = self.find_sentence_index(end_time, type_of_time="end")
             return sentence_info[start_index : end_index + 1]
+
+    def get_speaker_segments(self, time_precision: int = 6) -> list[dict]:
+        """
+        Generates speaker segments from the character information, which includes speaker tags.
+
+        This method processes the character-level speaker tags to produce a list of
+        segments, each representing a contiguous block of speech by a particular speaker
+        or an unlabeled segment. Speaker tags are re-labeled to be zero-indexed and
+        contiguous.
+
+        Parameters
+        ----------
+        time_precision : int, optional
+            The number of decimal places to round start and end times to, by default 6.
+
+        Returns
+        -------
+        list[dict]
+            A list of speaker segments. Each segment is a dictionary with keys:
+            'speakers': list[int]
+                A list containing the single integer label for the speaker of this segment.
+                Empty if the segment has no assigned speaker.
+            'start_time': float
+                The start time of the segment in seconds.
+            'end_time': float
+                The end time of the segment in seconds.
+        """
+        if not hasattr(self, '_char_info') or not self._char_info:
+            logging.warning("Transcription: _char_info is not populated or is empty. Cannot get speaker segments.")
+            return []
+
+        # Ensure char_info has been built (it should be by __init__)
+        # If _char_info could be None or empty, handle appropriately.
+        # Assuming _char_info is a list of dicts, each with 'start_time', 'end_time', 'speaker'
+
+        # First pass: Group characters by speaker tag and time contiguity
+        # This pass aims to create initial segments based on changes in speaker or significant time gaps.
+        initial_segments_by_chars = []
+        current_segment_chars = []
+        for char_data in self._char_info:
+            if char_data.get("start_time") is None or char_data.get("end_time") is None:
+                if current_segment_chars:
+                    initial_segments_by_chars.append(list(current_segment_chars)) # Store a copy
+                    current_segment_chars.clear()
+                logging.debug(f"Transcription: Skipping char_data due to missing time: {char_data.get('char')}")
+                continue
+
+            if not current_segment_chars:
+                current_segment_chars.append(char_data)
+            else:
+                prev_char_data = current_segment_chars[-1]
+                if prev_char_data.get("end_time") is None: # Should not happen if list is clean
+                    initial_segments_by_chars.append(list(current_segment_chars))
+                    current_segment_chars.clear()
+                    current_segment_chars.append(char_data) # Start new with current valid char
+                    continue
+
+                # Define a threshold for what constitutes a significant time gap to break a segment
+                time_gap_threshold = 0.5  # seconds; consider if this should be configurable
+                is_speaker_change = char_data.get("speaker") != prev_char_data.get("speaker")
+                is_time_gap = (char_data["start_time"] - prev_char_data["end_time"]) > time_gap_threshold
+
+                if is_speaker_change or is_time_gap:
+                    initial_segments_by_chars.append(list(current_segment_chars))
+                    current_segment_chars.clear()
+                current_segment_chars.append(char_data)
+
+        if current_segment_chars:
+            initial_segments_by_chars.append(list(current_segment_chars))
+
+        if not initial_segments_by_chars:
+            return []
+
+        # Second pass: Convert groups of characters into segment dictionaries and collect original speaker tags
+        processed_segments_info = []
+        original_speaker_tags = set()
+        for char_group in initial_segments_by_chars:
+            if not char_group:
+                continue
+
+            first_char = char_group[0]
+            last_char = char_group[-1]
+            speaker_tag = first_char.get("speaker") # Assumed consistent within the group from pass 1
+
+            # This check might be redundant if pass 1 filters Nones, but good for safety
+            if first_char.get("start_time") is None or last_char.get("end_time") is None:
+                logging.warning(f"Transcription: Segment group missing critical timing, skipping.")
+                continue
+
+            # Ensure end_time is not before start_time for the segment
+            segment_start_time = first_char["start_time"]
+            segment_end_time = last_char["end_time"]
+            if segment_end_time < segment_start_time:
+                logging.warning(f"Transcription: Segment group has end_time ({segment_end_time}) before start_time ({segment_start_time}), adjusting or skipping.")
+                # Option: skip, or set end_time = start_time, or use last valid end_time from group
+                segment_end_time = segment_start_time # Simplest fix: zero-duration segment
+
+            processed_segments_info.append({
+                "original_speaker_tag": speaker_tag,
+                "start_time": segment_start_time,
+                "end_time": segment_end_time,
+            })
+            if speaker_tag is not None:
+                original_speaker_tags.add(speaker_tag)
+
+        # Relabel speaker tags to be zero-indexed and contiguous
+        sorted_unique_tags = sorted(list(original_speaker_tags))
+        speaker_relabel_map = {tag: i for i, tag in enumerate(sorted_unique_tags)}
+
+        # Apply relabeling
+        relabeled_segments = []
+        for seg_info in processed_segments_info:
+            original_tag = seg_info["original_speaker_tag"]
+            speaker_list = []
+            if original_tag is not None and original_tag in speaker_relabel_map:
+                speaker_list.append(speaker_relabel_map[original_tag])
+
+            relabeled_segments.append({
+                "speakers": speaker_list,
+                "start_time": round(seg_info["start_time"], time_precision),
+                "end_time": round(seg_info["end_time"], time_precision),
+            })
+
+        if not relabeled_segments:
+            return []
+
+        # Third pass: Merge consecutive segments if the *newly labeled* speaker is the same
+        # and they are temporally close (approximating some of PyannoteDiarizer._adjust_segments)
+        final_merged_segments = []
+        current_merged_segment = relabeled_segments[0]
+
+        for i in range(1, len(relabeled_segments)):
+            next_segment = relabeled_segments[i]
+
+            current_speakers = current_merged_segment["speakers"]
+            next_speakers = next_segment["speakers"]
+
+            is_same_speaker_type = (not current_speakers and not next_speakers) or \
+                                   (current_speakers and next_speakers and \
+                                    current_speakers[0] == next_speakers[0])
+
+            merge_time_gap_threshold = 0.1  # seconds; smaller threshold for merging
+            # Ensure end_time of current is not after start_time of next before subtraction
+            time_diff = next_segment["start_time"] - current_merged_segment["end_time"]
+            is_contiguous_time = (time_diff >= 0 and time_diff < merge_time_gap_threshold) or \
+                                 (current_merged_segment["end_time"] >= next_segment["start_time"]) # Overlap or tiny gap
+
+            if is_same_speaker_type and is_contiguous_time:
+                current_merged_segment["end_time"] = max(current_merged_segment["end_time"], next_segment["end_time"])
+            else:
+                final_merged_segments.append(current_merged_segment)
+                current_merged_segment = next_segment
+
+        final_merged_segments.append(current_merged_segment)
+
+        return final_merged_segments
 
     def find_char_index(self, target_time: float, type_of_time: str) -> int:
         """

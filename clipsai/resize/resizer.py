@@ -1,10 +1,10 @@
-"""
-Resizing/cropping a media file to a different aspect ratio
+"""Resizing/cropping a media file to a different aspect ratio."""
 
-Notes
------
-- ROI is "region of interest"
-"""
+from __future__ import annotations
+
+# Notes
+# -----
+# ROI is "region of interest"
 # standard library imports
 import logging
 
@@ -17,6 +17,7 @@ from .segment import Segment
 from .vid_proc import extract_frames
 
 # local package imports
+from clipsai.gcloud.config import GCloudConfig # Added import
 from clipsai.media.editor import MediaEditor
 from clipsai.media.video_file import VideoFile
 from clipsai.utils import pytorch
@@ -24,56 +25,53 @@ from clipsai.utils.conversions import bytes_to_gibibytes
 
 # 3rd party imports
 import cv2
-from facenet_pytorch import MTCNN
-import mediapipe as mp
-import numpy as np
+# MTCNN and mediapipe imports removed
 from sklearn.cluster import KMeans
 import torch
+import numpy as np
 
 
 class Resizer:
     """
-    A class for calculating the initial coordinates for resizing by using
-    segmentation and face detection.
+    Calculates the optimal crop coordinates for resizing video segments.
+    This class uses speaker segments (from transcription diarization) and scene changes
+    (from Google Cloud Video Intelligence API) to define segments. For each segment,
+    it samples frames, detects faces using the Google Cloud Vision API, and then
+    determines a region of interest (ROI). This ROI is used to calculate the
+    crop coordinates for the target aspect ratio.
     """
 
     def __init__(
         self,
-        face_detect_margin: int = 20,
-        face_detect_post_process: bool = False,
+        gcloud_config: GCloudConfig,
         device: str = None,
     ) -> None:
         """
-        Initializes the Resizer with specific configurations for face
-        detection. This class uses FaceNet for detecting faces and MediaPipe for
-        analyzing mouth to aspect ratio to determine whose speaking within video frames.
+        Initializes the Resizer.
+
+        Face detection is performed using the Google Cloud Vision API.
+        The `device` parameter is retained for potential future local PyTorch operations
+        within the Resizer, but is not used for Google Cloud API calls.
 
         Parameters
         ----------
-        face_detect_margin: int, optional
-            The margin around detected faces, specified in pixels. Increasing this
-            value results in a larger area around each detected face being included.
-            Default is 20 pixels.
-        face_detect_post_process: bool, optional
-            Determines whether to apply post-processing on the detected faces. Setting
-            this to False prevents normalization of output images, making them appear
-            more natural to the human eye. Default is False (no post-processing).
-        device: str, optional
-            PyTorch device to perform computations on. Ex: 'cpu', 'cuda'. Default is
-            None (auto detects the correct device)
+        gcloud_config : GCloudConfig
+            Configuration object for Google Cloud services, used for initializing
+            API clients (e.g., Vision API).
+        device : str, optional
+            PyTorch device ('cpu', 'cuda', etc.) for any local PyTorch-based
+            operations that might be added or retained in the Resizer.
+            Currently, primary computations like face detection are via Google Cloud.
+            Default is None (auto-detects via `clipsai.utils.pytorch.get_compute_device`).
         """
+        self._gcloud_config = gcloud_config
         if device is None:
             device = pytorch.get_compute_device()
         pytorch.assert_compute_device_available(device)
-        logging.debug("FaceNet using device: {}".format(device))
+        logging.debug(f"Resizer initialized. Device for potential PyTorch ops: {device}")
 
-        self._face_detector = MTCNN(
-            margin=face_detect_margin,
-            post_process=face_detect_post_process,
-            device=device,
-        )
-        # media pipe automatically uses gpu if available
-        self._face_mesher = mp.solutions.face_mesh.FaceMesh()
+        # self._face_detector = None # REMOVED MTCNN init
+        # self._face_mesher = None # REMOVED MediaPipe init
         self._media_editor = MediaEditor()
 
     def resize(
@@ -518,54 +516,140 @@ class Resizer:
         self,
         frames: list[np.ndarray],
         face_detect_width: int,
-    ) -> list[np.ndarray]:
+    ) -> list[np.ndarray | None]:
         """
-        Detect faces in a list of frames.
+        Detects faces in a list of frames using the Google Cloud Vision API.
+
+        Frames can be optionally downscaled to `face_detect_width` before being
+        sent to the API to reduce processing time and cost. Detected face bounding
+        box coordinates are scaled back to the original frame dimensions.
 
         Parameters
         ----------
-        frames: list[np.ndarray]
-            The frames to detect faces in.
-        face_detect_width: int
-            The width to use for face detection.
+        frames : list[np.ndarray]
+            A list of video frames (as NumPy arrays) in which to detect faces.
+        face_detect_width : int
+            The target width to which frames are resized before being sent to the
+            Vision API. If a frame's original width is smaller than this value,
+            it is not upscaled. This helps standardize input for the API and can
+            reduce payload size.
 
         Returns
         -------
-        list[np.ndarray]
-            The face detections for each frame.
+        list[np.ndarray | None]
+            A list corresponding to the input frames. Each element is either:
+            - A NumPy array of shape (num_faces, 4), where each row represents a
+              detected face's bounding box as [x1, y1, x2, y2] in original frame
+              coordinates.
+            - None, if no faces were detected in the corresponding frame or if an
+              error occurred during its processing by the API.
+
+        Raises
+        ------
+        ResizerError
+            If the Google Cloud Vision library is not installed, if frame encoding
+            fails, or if there's an API call failure or other processing error.
         """
-        if len(frames) == 0:
-            logging.debug("No frames to detect faces in.")
+        try:
+            from google.cloud import vision
+            from google.api_core import exceptions as google_exceptions
+        except ModuleNotFoundError as e:
+            logging.error(f"Google Cloud Vision library not found: {e}")
+            raise ResizerError(f"Google Cloud Vision library not found. Please install google-cloud-vision.") from e
+
+        if not frames:
             return []
 
-        # resize the frames
-        logging.debug("Detecting faces in {} frames.".format(len(frames)))
-        downsample_factor = max(frames[0].shape[1] / face_detect_width, 1)
-        detect_height = int(frames[0].shape[0] / downsample_factor)
-        resized_frames = []
-        for frame in frames:
-            resized_frame = cv2.resize(frame, (face_detect_width, detect_height))
-            if torch.cuda.is_available():
-                resized_frame = torch.from_numpy(resized_frame).to(
-                    device="cuda", dtype=torch.uint8
-                )
-            resized_frames.append(resized_frame)
+        vision_client = vision.ImageAnnotatorClient(
+            client_options={"project_id": self._gcloud_config.project_id} if self._gcloud_config.project_id else None
+        )
 
-        # detect faces in batches
-        if torch.cuda.is_available():
-            resized_frames = torch.stack(resized_frames)
-        detections, _ = self._face_detector.detect(resized_frames)
+        requests = []
+        downsample_factors = []
 
-        # detections are returned as numpy arrays regardless
-        face_detections = []
-        for detection in detections:
-            if detection is not None:
-                detection[detection < 0] = 0
-                detection = (detection * downsample_factor).astype(np.int16)
-            face_detections.append(detection)
+        for frame_np in frames:
+            original_height, original_width = frame_np.shape[:2]
+            current_frame_for_api = frame_np
+            downsample_factor = 1.0
 
-        logging.debug("Detected faces in {} frames.".format(len(face_detections)))
-        return face_detections
+            if face_detect_width < original_width:
+                downsample_factor = original_width / face_detect_width
+                detect_height = int(original_height / downsample_factor)
+                current_frame_for_api = cv2.resize(frame_np, (face_detect_width, detect_height))
+
+            downsample_factors.append(downsample_factor)
+
+            success, encoded_image = cv2.imencode(".jpg", current_frame_for_api)
+            if not success:
+                logging.error("Failed to encode frame to JPEG for Vision API.")
+                # Add a placeholder for this frame's result and continue
+                # Or, raise an error immediately if one failure should stop all.
+                # For batch, it's often better to collect individual errors.
+                # Here, we'll effectively skip adding a request for this frame.
+                # This needs to be reconciled with the length of `downsample_factors`
+                # and the final `all_frame_detections` list.
+                # A simpler approach for now: raise error or return Nones for all if one fails.
+                raise ResizerError("Failed to encode a frame to JPEG for Vision API.")
+
+            image = vision.Image(content=encoded_image.tobytes())
+            feature = vision.Feature(type_=vision.Feature.Type.FACE_DETECTION, max_results=10)
+            requests.append(vision.AnnotateImageRequest(image=image, features=[feature]))
+
+        all_frame_detections = []
+        if not requests: # If all frames failed encoding for some reason
+            return [None] * len(frames)
+
+        try:
+            response_batch = vision_client.batch_annotate_images(requests=requests)
+
+            for i, response_single_image in enumerate(response_batch.responses):
+                if response_single_image.error.message:
+                    logging.error(f"Vision API error for frame index {i}: {response_single_image.error.message}")
+                    all_frame_detections.append(None)
+                    continue
+
+                frame_face_boxes = []
+                for face_annotation in response_single_image.face_annotations:
+                    vertices = face_annotation.bounding_poly.vertices
+                    x_coords = [v.x for v in vertices]
+                    y_coords = [v.y for v in vertices]
+
+                    # Bounding_poly can be from a rotated face, so min/max creates an axis-aligned box
+                    x1, y1 = min(x_coords), min(y_coords)
+                    x2, y2 = max(x_coords), max(y_coords)
+
+                    current_downsample_factor = downsample_factors[i]
+                    x1 = int(x1 * current_downsample_factor)
+                    y1 = int(y1 * current_downsample_factor)
+                    x2 = int(x2 * current_downsample_factor)
+                    y2 = int(y2 * current_downsample_factor)
+
+                    # Clamp negative values and ensure box validity (x1<x2, y1<y2)
+                    # Original frame dimensions are needed for more robust clamping if boxes can exceed them.
+                    # For now, simple max(0, val) and ensuring x1<x2, y1<y2.
+                    final_x1, final_y1 = max(0, x1), max(0, y1)
+                    final_x2, final_y2 = max(final_x1, x2), max(final_y1, y2) # Ensure x2 > x1, y2 > y1
+
+                    frame_face_boxes.append([final_x1, final_y1, final_x2, final_y2])
+
+                if frame_face_boxes:
+                    all_frame_detections.append(np.array(frame_face_boxes, dtype=np.int16))
+                else:
+                    all_frame_detections.append(None)
+
+        except google_exceptions.GoogleAPICallError as e:
+            logging.error(f"Google Cloud Vision API call failed: {e}")
+            raise ResizerError(f"Vision API call failed: {e}") from e
+        except Exception as e: # Catch other unexpected errors
+            logging.error(f"Error processing face detection with Vision API: {e}")
+            raise ResizerError(f"Error in Vision API face detection processing: {e}") from e
+
+        # Ensure the output list matches the number of input frames if some requests failed early
+        # This part is tricky if requests list itself became shorter than frames list.
+        # The current logic assumes requests list is built for all encodable frames.
+        # If an encoding error for one frame means we don't call batch_annotate_images,
+        # then this needs adjustment. The ResizerError on encoding failure simplifies this.
+        return all_frame_detections
 
     def _add_x_y_coords_to_each_segment(
         self,
@@ -732,8 +816,8 @@ class Resizer:
         for segment in segments:
             # find segment roi
             if segment["found_face"] is True:
+                # Updated call to _calc_segment_roi (frames parameter removed)
                 roi = self._calc_segment_roi(
-                    frames=frames[idx : idx + segment["num_samples"]],
                     face_detections=face_detections[idx : idx + segment["num_samples"]],
                 )
                 idx += segment["num_samples"]
@@ -759,23 +843,39 @@ class Resizer:
 
     def _calc_segment_roi(
         self,
-        frames: list[np.ndarray],
-        face_detections: list[np.ndarray],
+        face_detections: list[np.ndarray | None],
     ) -> Rect:
         """
-        Find the region of interest (ROI) for a given segment.
+        Calculates the primary Region of Interest (ROI) for a segment based on
+        face detections from multiple sampled frames within that segment.
+
+        The method uses K-Means clustering to group all detected bounding boxes
+        from the sampled frames.
+        - If only one cluster (k=1) is found, its average bounding box is the ROI.
+        - If multiple clusters (k>1) are found, a heuristic is applied:
+            1. The cluster with the most persistent face (most detections) is chosen.
+            2. If there's a tie in persistence, the cluster whose average bounding
+               box has the largest area is chosen.
+        The ROI is the average bounding box of the selected cluster.
 
         Parameters
         ----------
-        frames: np.ndarray
-            The frames to analyze.
-        face_detections: np.ndarray
-            The face detection outputs for each frame
+        face_detections : list[np.ndarray | None]
+            A list of face detection results for frames sampled from the segment.
+            Each element corresponds to a frame:
+            - np.ndarray of shape (num_faces, 4): bounding boxes [x1, y1, x2, y2]
+            - None: if no faces were detected in that frame.
 
         Returns
         -------
         Rect
-            The region of interest (ROI) for the segment.
+            The calculated Region of Interest (ROI) for the segment.
+
+        Raises
+        ------
+        ResizerError
+            If no faces are detected across all sampled frames (k=0), or if an
+            internal error occurs in selecting a primary face cluster when k > 1.
         """
         segment_roi = None
 
@@ -819,121 +919,58 @@ class Resizer:
                 )
                 kmeans_idx += 1
 
-        # find the face who's mouth moves the most
-        max_mouth_movement = 0
-        for bounding_box_group in bounding_box_groups:
-            mouth_movement, roi = self._calc_mouth_movement(bounding_box_group, frames)
-            if mouth_movement > max_mouth_movement:
-                max_mouth_movement = mouth_movement
-                segment_roi = roi
+        # NEW LOGIC for k > 1 (replaces mouth_movement and its fallback):
+        if k > 1:
+            best_group_index = -1
+            max_detections_in_group = -1
+            max_area_for_tied_group = -1.0
 
-        # no mouth movement detected -> choose face with the most frames
-        if segment_roi is None:
-            logging.debug("No mouth movement detected for segment.")
-            max_frames = 0
-            for bounding_box_group in bounding_box_groups:
-                if len(bounding_box_group) > max_frames:
-                    max_frames = len(bounding_box_group)
-                    avg_box = np.array([0, 0, 0, 0])
-                    for bounding_box_data in bounding_box_group:
-                        avg_box += bounding_box_data["bounding_box"]
-                    avg_box = avg_box / len(bounding_box_group)
-                    avg_box = avg_box.astype(np.int16)
-                    segment_roi = Rect(
-                        avg_box[0],
-                        avg_box[1],
-                        avg_box[2] - avg_box[0],
-                        avg_box[3] - avg_box[1],
-                    )
+            for i, group_data_list in enumerate(bounding_box_groups):
+                num_detections_in_group = len(group_data_list)
+
+                if num_detections_in_group == 0:
+                    continue
+
+                current_group_avg_box_sum = np.array([0.0, 0.0, 0.0, 0.0])
+                for item_dict in group_data_list:
+                    current_group_avg_box_sum += item_dict["bounding_box"]
+
+                avg_box_coords = (current_group_avg_box_sum / num_detections_in_group).astype(np.int16)
+                avg_box_width = avg_box_coords[2] - avg_box_coords[0]
+                avg_box_height = avg_box_coords[3] - avg_box_coords[1]
+                avg_box_width = max(0, avg_box_width)
+                avg_box_height = max(0, avg_box_height)
+                current_group_area = float(avg_box_width * avg_box_height)
+
+                if num_detections_in_group > max_detections_in_group:
+                    max_detections_in_group = num_detections_in_group
+                    max_area_for_tied_group = current_group_area
+                    best_group_index = i
+                elif num_detections_in_group == max_detections_in_group:
+                    if current_group_area > max_area_for_tied_group:
+                        max_area_for_tied_group = current_group_area
+                        best_group_index = i
+
+            if best_group_index != -1:
+                chosen_group_data_list = bounding_box_groups[best_group_index]
+                avg_box_sum = np.array([0.0, 0.0, 0.0, 0.0])
+                for item_dict in chosen_group_data_list:
+                    avg_box_sum += item_dict["bounding_box"]
+                avg_box_coords = (avg_box_sum / len(chosen_group_data_list)).astype(np.int16)
+                segment_roi = Rect(
+                    x=avg_box_coords[0],
+                    y=avg_box_coords[1],
+                    width=max(0, avg_box_coords[2] - avg_box_coords[0]),
+                    height=max(0, avg_box_coords[3] - avg_box_coords[1])
+                )
+            else:
+                logging.error("Internal error in _calc_segment_roi: No best face group found with k > 1. Defaulting to a full frame ROI or raising error.")
+                raise ResizerError("Internal error: Could not determine primary face cluster in _calc_segment_roi with k > 1.")
+        # End of new logic for k > 1. Note: segment_roi would already be set if k==1 from before.
 
         return segment_roi
 
-    def _calc_mouth_movement(
-        self,
-        bounding_box_group: list[dict[np.ndarray, int]],
-        frames: list[np.ndarray],
-    ) -> tuple[float, Rect]:
-        """
-        Calculates the mouth movement for a group of faces. These faces are assumed to
-        all be the same person in different frames of the source video. Further, the
-        frames are assumed to be in order of occurrence (earlier frames first).
-
-        Parameters
-        ----------
-        bounding_box_group: list[dict[np.ndarray, int]]
-            The faces to analyze. A list of dictionaries, each with the following keys:
-                bounding_box: np.ndarray
-                    The bounding box of the face to analyze. The array contains four
-                    values: [x1, y1, x2, y2]
-                frame: int
-                    The frame the bounding box of the face is associated with.
-        frames: list[np.ndarray]
-            The frames to analyze.
-
-        Returns
-        -------
-        float
-            The mouth movement of the faces across the frames.
-        """
-        mouth_movement = 0
-        roi = Rect(0, 0, 0, 0)
-        prev_mar = None
-        mouth_movement = 0
-
-        for bounding_box_data in bounding_box_group:
-            # roi
-            box = bounding_box_data["bounding_box"]
-            x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
-            # sum all roi's, average after loop
-            roi += Rect(x1, y1, x2 - x1, y2 - y1)
-            frame = frames[bounding_box_data["frame"]]
-            face = frame[y1:y2, x1:x2, :]
-
-            # mouth movement
-            mar = self._calc_mouth_aspect_ratio(face)
-            if mar is None:
-                continue
-            if prev_mar is None:
-                prev_mar = mar
-                continue
-            mouth_movement += abs(mar - prev_mar)
-            prev_mar = mar
-
-        return mouth_movement, roi / len(bounding_box_group)
-
-    def _calc_mouth_aspect_ratio(self, face: np.ndarray) -> float:
-        """
-        Calculate the mouth aspect ratio using dlib shape predictor.
-
-        Parameters
-        ----------
-        face: np.ndarray
-            Pytorch array of a face
-
-        Returns
-        -------
-        mar: float
-            The mouth aspect ratio.
-        """
-        results = self._face_mesher.process(face)
-        if results.multi_face_landmarks is None:
-            return None
-
-        landmarks = []
-        for landmark in results.multi_face_landmarks[0].landmark:
-            landmarks.append([landmark.x, landmark.y])
-        landmarks = np.array(landmarks)
-        landmarks[:, 0] *= face.shape[1]
-        landmarks[:, 1] *= face.shape[0]
-
-        # inner lip
-        upper_lip = landmarks[[95, 88, 178, 87, 14, 317, 402, 318, 324], :]
-        lower_lip = landmarks[[191, 80, 81, 82, 13, 312, 311, 310, 415], :]
-        avg_mouth_height = np.mean(np.abs(upper_lip - lower_lip))
-        mouth_width = np.sum(np.abs(landmarks[[308], :] - landmarks[[78], :]))
-        mar = avg_mouth_height / mouth_width
-
-        return mar
+    # _calc_mouth_movement and _calc_mouth_aspect_ratio methods are removed.
 
     def _calc_crop(
         self,
@@ -1026,9 +1063,14 @@ class Resizer:
 
     def cleanup(self) -> None:
         """
-        Remove the face detector from memory and explicity free up GPU memory.
+        Perform any necessary cleanup.
+        (Face detector/mesher cleanup removed as they are no longer initialized here)
         """
-        del self._face_detector
-        self._face_detector = None
+        # del self._face_detector # REMOVED
+        # self._face_detector = None # REMOVED
+        # del self._face_mesher # REMOVED (if it was ever here)
+        # self._face_mesher = None # REMOVED (if it was ever here)
         if torch.cuda.is_available():
+            # This is a general PyTorch utility, can remain if other torch ops exist
+            # or might be used by Resizer in other contexts.
             torch.cuda.empty_cache()

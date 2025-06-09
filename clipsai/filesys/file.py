@@ -16,7 +16,10 @@ from .exceptions import FileError
 from .object import FileSystemObject
 
 # 3rd party imports
-import magic
+try:  # pragma: no cover - optional dependency
+    import magic
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    magic = None  # type: ignore
 
 
 class File(FileSystemObject):
