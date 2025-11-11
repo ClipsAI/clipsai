@@ -1,0 +1,50 @@
+# AdLab Viral Clip Factory Configuration
+# Copy this file to config.yaml and customize as needed
+
+anthropic:
+  api_key: ${ANTHROPIC_API_KEY}
+  max_tokens: 1024
+  model: claude-3-5-sonnet-20241022
+  temperature: 1.0
+export:
+  audio_codec: aac
+  crf: 23
+  output_dir: ./output
+  preset: medium
+  thumbnail_time: 1.0
+  video_codec: libx264
+processing:
+  batch_size: 10
+  max_clip_duration: 90
+  max_clips: 500
+  min_clip_duration: 10
+  target_clips: 300
+transcription:
+  device: auto
+  language: null
+  model_size: base
+variations:
+  aspect_ratios:
+  - '9:16'
+  - '1:1'
+  - '4:5'
+  durations:
+  - 15
+  - 30
+  - 45
+  - 60
+  max_variations_per_clip: 12
+  temporal_shifts:
+  - -1.0
+  - -0.5
+  - 0
+  - 0.5
+  - 1.0
+vvsa:
+  hook_duration: 3.0
+  min_score: 6.0
+  weights:
+    audio: 0.2
+    llm: 0.2
+    text: 0.3
+    visual: 0.3

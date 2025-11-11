@@ -478,7 +478,17 @@ def smooth(x, window_len=3, window="flat"):
     if window == "flat":  # moving average
         w = numpy.ones(window_len, "d")
     else:
-        w = eval("numpy." + window + "(window_len)")
+        # Use safe dictionary dispatch instead of eval()
+        window_functions = {
+            "hanning": numpy.hanning,
+            "hamming": numpy.hamming,
+            "bartlett": numpy.bartlett,
+            "blackman": numpy.blackman,
+        }
+        window_func = window_functions.get(window)
+        if window_func is None:
+            raise ValueError(f"Unknown window type: {window}")
+        w = window_func(window_len)
 
     y = numpy.convolve(w / w.sum(), s, mode="same")
 

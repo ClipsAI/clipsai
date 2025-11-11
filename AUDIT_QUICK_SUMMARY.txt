@@ -1,0 +1,203 @@
+================================================================================
+OPENROUTER MODEL CONFIGURATION AUDIT - QUICK SUMMARY
+================================================================================
+
+KEY FINDING: NO OpenRouter found - using direct API calls instead
+
+================================================================================
+CURRENT MODEL USAGE
+================================================================================
+
+CLAUDE (Anthropic):
+  - claude-3-5-sonnet-20241022  (PRIMARY - all tasks)
+  - claude-3-5-haiku-20241022   (FALLBACK - title generation)
+
+GPT (OpenAI):
+  - gpt-4                        (SECONDARY - high-quality titles)
+
+LOCAL MODELS:
+  - whisperx (large-v2/tiny)     (Speech transcription)
+  - all-roberta-large-v1         (Text embeddings)
+
+================================================================================
+FILES WITH MODEL CONFIGURATIONS (12 total)
+================================================================================
+
+Configuration Files:
+  1. /adlab/config.py                              - Config manager
+  2. /adlab/config.example.yaml                    - YAML template
+  3. /clipfactory/.env.example                     - Env vars
+
+LLM Files:
+  4. /adlab/llm.py                                 - Claude wrapper
+  5. /clipfactory/processing/ai/title_generator.py - Title gen (HARDCODED)
+  6. /adlab/titles.py                              - Title abstraction
+  7. /adlab/vvsa.py                                - Hook scoring
+
+Backend/Orchestration:
+  8. /clipfactory/backend/main.py                  - FastAPI (incomplete)
+  9. /clipfactory/processing/orchestrator.py       - Pipeline (TODOs)
+
+Other:
+  10. /clipsai/transcribe/transcriber.py            - WhisperX
+  11. /clipsai/clip/text_embedder.py                - RoBERTa
+  12. /adlab/run.py                                 - CLI
+
+================================================================================
+ISSUES FOUND (5 TOTAL)
+================================================================================
+
+[MEDIUM] ISSUE #1: Hardcoded Models in Clip Factory
+  Location: /clipfactory/processing/ai/title_generator.py (lines 90, 104, 172, 181, 251)
+  Problem:  Models hardcoded, cannot change without editing code
+  Solution: Make configurable like AdLab
+
+[MEDIUM] ISSUE #2: Inconsistent Configuration Patterns
+  AdLab:         config-based (good)
+  Clip Factory:  hardcoded (bad)
+  Solution: Unify both to use same pattern
+
+[MEDIUM] ISSUE #3: Council Voting Not Implemented
+  Status: Marked as TODO with placeholder code
+  Found: /clipfactory/backend/main.py:97
+  Found: /clipfactory/processing/orchestrator.py:156
+  Note:  No adlab/council.py file exists
+
+[LOW] ISSUE #4: Unused Gemini API Key
+  Location: /clipfactory/.env.example:7
+  Status:   Never used anywhere in code
+
+[LOW] ISSUE #5: Outdated Docstrings
+  File: /clipfactory/processing/ai/title_generator.py (lines 19-21)
+  Says: "Claude 4.5 Haiku", "GPT-5", "Gemini 2.5 Flash"
+  Actually: Claude 3.5 Haiku, GPT-4, no Gemini
+
+================================================================================
+HARDCODED vs CONFIGURABLE
+================================================================================
+
+GOOD (AdLab):
+  ✓ adlab/llm.py:18              - model parameter with default
+  ✓ adlab/config.py:53           - configurable via YAML
+  ✓ adlab/config.example.yaml:7  - template shows options
+
+BAD (Clip Factory):
+  ✗ clipfactory/.../title_generator.py:90    - hardcoded gpt-4
+  ✗ clipfactory/.../title_generator.py:104   - hardcoded claude-3-5-haiku
+  ✗ clipfactory/.../title_generator.py:172   - hardcoded claude-3-5-haiku
+  ✗ clipfactory/.../title_generator.py:181   - hardcoded gpt-4
+  ✗ clipfactory/.../title_generator.py:251   - hardcoded claude-3-5-haiku
+
+CONFIGURABLE: 20% (Clip Factory) vs 80% (AdLab)
+
+================================================================================
+ENVIRONMENT VARIABLES
+================================================================================
+
+USED:
+  ✓ ANTHROPIC_API_KEY   - adlab/llm.py, adlab/config.py
+  ✓ OPENAI_API_KEY      - clipfactory/title_generator.py
+  ✓ UPLOAD_DIR          - backend/main.py
+  ✓ OUTPUT_DIR          - backend/main.py
+  ✓ FFMPEG_PATH         - implicit
+
+NOT USED (ORPHANED):
+  ✗ GOOGLE_GEMINI_API_KEY       - defined but unused
+  ✗ DATABASE_URL                 - backend incomplete
+  ✗ REDIS_URL                    - backend incomplete
+  ✗ GOOGLE_CALENDAR_API_KEY      - feature not implemented
+  ✗ ICLOUD_USERNAME/PASSWORD     - feature not implemented
+  ✗ TIKTOK/INSTAGRAM/YOUTUBE API - auto-posting not implemented
+  ✗ ENABLE_COUNCIL_DELIBERATION  - council not implemented
+  ✗ SENTRY_DSN                   - monitoring not setup
+  ✗ PROMETHEUS_PORT              - monitoring not setup
+
+================================================================================
+COUNCIL VOTING SYSTEM
+================================================================================
+
+Status: NOT IMPLEMENTED
+Found:  TODOs with mock code
+
+What exists instead: VVSA Scoring
+  - Weighted average of components (not voting):
+    - Text score (heuristic)
+    - Audio score (heuristic)
+    - Visual score (placeholder)
+    - LLM score (Claude)
+  - Formula: 0.3×visual + 0.2×audio + 0.3×text + 0.2×llm
+
+================================================================================
+RECOMMENDED ACTIONS
+================================================================================
+
+PRIORITY 1 (HIGH): Standardize Configuration
+  [ ] Extract hardcoded models from clipfactory/.../title_generator.py
+  [ ] Make them configurable via config.yaml
+  [ ] Unify with AdLab's configuration pattern
+  [ ] Support model fallback chain
+
+PRIORITY 2 (MEDIUM): Remove Unused Environment Variables
+  [ ] Delete 10 orphaned env vars from .env.example
+  [ ] Document which features are implemented vs planned
+  [ ] Add comments to .env.example
+
+PRIORITY 3 (LOW): Fix Outdated Documentation
+  [ ] Update docstring in title_generator.py
+  [ ] Remove references to Claude 4.5 Haiku
+  [ ] Remove references to GPT-5
+  [ ] Remove references to Gemini 2.5 Flash
+
+PRIORITY 4 (MEDIUM): Decide on Council Voting
+  [ ] Option A: Remove placeholder code, use VVSA only
+  [ ] Option B: Implement proper multi-model voting system
+
+PRIORITY 5 (LOW): Create Model Compatibility Matrix
+  [ ] Document which models support which features
+  [ ] Add vision support notes
+  [ ] Add cost/speed tradeoffs
+
+================================================================================
+NO OpenRouter USAGE
+================================================================================
+
+Search Results: 0 references found
+  ✓ No "openrouter" references
+  ✓ No "OpenRouter" references
+  ✓ No OpenRouter base URLs
+  ✓ No OpenRouter API keys
+  ✓ No model routing through OpenRouter
+
+Conclusion: Codebase uses DIRECT API CALLS to Anthropic and OpenAI
+
+Benefits of direct calls:
+  + Access to latest models immediately
+  + Simpler authentication
+  + Lower latency
+  - More complex API management
+  - No built-in cross-provider fallback
+  - Rate limiting per-provider
+
+================================================================================
+COMPLETE MODEL REFERENCE
+================================================================================
+
+ANTHROPIC:
+  claude-3-5-sonnet-20241022   ✓ Used - primary model
+  claude-3-5-haiku-20241022    ✓ Used - fallback model
+
+OPENAI:
+  gpt-4                        ✓ Used - secondary path
+
+LOCAL:
+  whisperx:large-v2/tiny       ✓ Used - transcription
+  all-roberta-large-v1         ✓ Used - embeddings
+
+MENTIONED BUT NOT USED:
+  claude-4.5-haiku             ✗ Doesn't exist (typo)
+  gpt-5                        ✗ Not available yet
+  gemini-2.5-flash             ✗ Not implemented
+
+================================================================================
+END OF SUMMARY
+================================================================================

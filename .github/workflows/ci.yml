@@ -1,0 +1,213 @@
+name: CI - Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+
+    - name: Run Black formatter check
+      run: |
+        black --check --diff .
+
+    - name: Run Flake8 linter
+      run: |
+        flake8 clipsai tests --max-line-length=100 --extend-ignore=E203,W503 --exclude=__pycache__,.git,.pytest_cache
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install mypy types-setuptools
+
+    - name: Run mypy type checker
+      run: |
+        mypy clipsai --install-types --non-interactive --ignore-missing-imports
+      continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety
+
+    - name: Run Bandit security scanner
+      run: |
+        bandit -r clipsai -f json -o bandit-report.json || true
+        bandit -r clipsai
+      continue-on-error: true
+
+    - name: Run Safety dependency scanner
+      run: |
+        safety check --json || true
+        safety check
+      continue-on-error: true
+
+    - name: Upload Bandit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install pytest-cov pytest-xdist
+
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ -v --cov=clipsai --cov-report=xml --cov-report=term --cov-report=html -n auto
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.11'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload coverage report artifact
+      uses: actions/upload-artifact@v4
+      if: matrix.python-version == '3.11'
+      with:
+        name: coverage-report
+        path: htmlcov/
+
+  build-docker:
+    name: Test Docker Builds
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test build backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./clipfactory/backend
+        push: false
+        tags: clipsai-backend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test build frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./clipfactory/frontend
+        push: false
+        tags: clipsai-frontend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, security, test, build-docker]
+    if: always()
+
+    steps:
+    - name: Check CI status
+      run: |
+        if [[ "${{ needs.lint.result }}" != "success" ]]; then
+          echo "Lint job failed"
+          exit 1
+        fi
+        if [[ "${{ needs.test.result }}" != "success" ]]; then
+          echo "Test job failed"
+          exit 1
+        fi
+        if [[ "${{ needs.build-docker.result }}" != "success" ]]; then
+          echo "Docker build job failed"
+          exit 1
+        fi
+        echo "All CI checks passed!"

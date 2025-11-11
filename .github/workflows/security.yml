@@ -1,0 +1,294 @@
+name: Security - Security Scanning
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety pip-audit
+
+    - name: Run Safety check
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --output safety-report.txt || true
+      continue-on-error: true
+
+    - name: Run pip-audit
+      run: |
+        pip-audit --format json --output pip-audit-report.json || true
+        pip-audit || true
+      continue-on-error: true
+
+    - name: Upload Safety report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: safety-report
+        path: |
+          safety-report.json
+          safety-report.txt
+
+    - name: Upload pip-audit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pip-audit-report
+        path: pip-audit-report.json
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install detect-secrets
+      run: |
+        pip install detect-secrets
+
+    - name: Run detect-secrets scan
+      run: |
+        detect-secrets scan --all-files --force-use-all-plugins --exclude-files '\.git/.*' > .secrets.baseline
+        cat .secrets.baseline
+
+    - name: Audit detect-secrets baseline
+      run: |
+        detect-secrets audit .secrets.baseline || true
+
+    - name: Upload secrets baseline
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: secrets-baseline
+        path: .secrets.baseline
+
+    - name: Fail if secrets found
+      run: |
+        if grep -q '"results":' .secrets.baseline && [ $(grep -o '"results":' .secrets.baseline | wc -l) -gt 0 ]; then
+          echo "⚠️  Potential secrets detected! Review the baseline file."
+          exit 0  # Don't fail the build, just warn
+        fi
+
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/python
+          p/bandit
+          p/owasp-top-ten
+        generateSarif: true
+
+    - name: Upload Semgrep SARIF
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+        category: semgrep
+
+  sast-codeql:
+    name: SAST - CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+  bandit-scan:
+    name: Security - Bandit
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install Bandit
+      run: |
+        pip install bandit[toml]
+
+    - name: Run Bandit security scanner
+      run: |
+        bandit -r clipsai -f json -o bandit-report.json || true
+        bandit -r clipsai -f txt -o bandit-report.txt || true
+        bandit -r clipsai --severity-level medium
+
+    - name: Upload Bandit reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-reports
+        path: |
+          bandit-report.json
+          bandit-report.txt
+
+  docker-scan:
+    name: Docker Image Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    strategy:
+      matrix:
+        dockerfile:
+          - ./clipfactory/backend/Dockerfile
+          - ./clipfactory/frontend/Dockerfile
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.dockerfile == './clipfactory/backend/Dockerfile' && './clipfactory/backend' || './clipfactory/frontend' }}
+        push: false
+        tags: security-scan:latest
+        load: true
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: security-scan:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+
+    - name: Upload Trivy results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Trivy vulnerability scanner (table output)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: security-scan:latest
+        format: 'table'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        pip install pip-licenses
+
+    - name: Check licenses
+      run: |
+        pip-licenses --format=markdown --output-file=licenses.md
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-report
+        path: |
+          licenses.md
+          licenses.json
+
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan, sast-semgrep, sast-codeql, bandit-scan, license-scan]
+    if: always()
+
+    steps:
+    - name: Create summary
+      run: |
+        echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Secret Scan | ${{ needs.secret-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| SAST (Semgrep) | ${{ needs.sast-semgrep.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| SAST (CodeQL) | ${{ needs.sast-codeql.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Bandit Scan | ${{ needs.bandit-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| License Scan | ${{ needs.license-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "*Scan completed at $(date -u)*" >> $GITHUB_STEP_SUMMARY

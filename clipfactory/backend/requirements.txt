@@ -1,0 +1,45 @@
+# FastAPI Backend Requirements
+# Updated: 2025-11-10
+# Pin strategy: ~= for compatible releases, == for critical stability
+
+# Web Framework
+fastapi~=0.115.0
+uvicorn[standard]~=0.32.0
+python-multipart~=0.0.12
+
+# Database
+sqlalchemy~=2.0.36
+psycopg2-binary~=2.9.10
+alembic~=1.14.0
+
+# Task Queue
+celery~=5.4.0
+redis~=5.2.0
+
+# Video Processing
+opencv-python~=4.10.0
+pillow~=11.0.0
+
+# AI/ML - CRITICAL: Major version updates
+anthropic~=0.72.0
+openai~=2.7.1
+google-generativeai~=0.8.0
+
+# Utilities
+pydantic~=2.10.0
+pydantic-settings~=2.6.0
+python-dotenv~=1.0.1
+httpx~=0.28.0
+aiofiles~=24.1.0
+
+# XML Processing
+lxml~=5.3.0
+dicttoxml~=1.7.16
+
+# Audio/Video Metadata
+ffmpeg-python~=0.2.0
+mutagen~=1.47.0
+
+# Monitoring
+prometheus-client~=0.21.0
+sentry-sdk~=2.19.0

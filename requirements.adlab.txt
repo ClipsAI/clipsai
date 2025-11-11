@@ -1,0 +1,28 @@
+# AdLab Viral Clip Factory Requirements
+# Extends ClipsAI with minimal additional dependencies
+# Updated: 2025-11-10
+
+# Core dependencies (if not already in clipsai)
+# Most are already included in clipsai's setup.py
+
+# CLI and UI
+typer~=0.15.0
+rich~=13.9.0
+
+# LLM Integration - CRITICAL: Updated from 0.18.0 to 0.72.0
+anthropic~=0.72.0
+
+# Configuration
+pyyaml~=6.0.2
+
+# Note: The following are already included in clipsai:
+# - torch (for GPU/CPU processing)
+# - whisperx (for transcription)
+# - numpy
+# - opencv-python (for video processing)
+# - pyannote.audio (for diarization)
+# - sentence-transformers (for embeddings)
+# - nltk
+
+# Total new dependencies: 4 packages
+# Well under the <20 constraint

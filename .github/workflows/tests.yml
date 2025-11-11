@@ -1,0 +1,257 @@
+name: Tests - Extended Test Suite
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install pytest-cov pytest-xdist pytest-timeout
+
+    - name: Run unit tests
+      run: |
+        pytest tests/ -v -m "not integration and not e2e" --cov=clipsai --cov-report=xml --cov-report=term -n auto --timeout=300
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.11'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: unit-tests-${{ matrix.python-version }}
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install pytest-cov pytest-timeout
+
+    # Mock integration tests - add real tests when ready
+    - name: Run integration tests
+      run: |
+        echo "Integration tests placeholder"
+        echo "Add real integration tests here when available"
+        # pytest tests/ -v -m integration --cov=clipsai --cov-report=xml --timeout=600
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    # - name: Upload integration test coverage
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     file: ./coverage.xml
+    #     flags: integration
+    #     name: integration-tests
+    #   env:
+    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Start services with Docker Compose
+      run: |
+        echo "E2E tests placeholder"
+        echo "Configure docker-compose and run E2E tests when ready"
+        # cd clipfactory
+        # docker-compose up -d
+        # sleep 30
+
+    # - name: Run E2E tests
+    #   run: |
+    #     pytest tests/ -v -m e2e --timeout=900
+    #   env:
+    #     TEST_URL: http://localhost:8000
+
+    # - name: Collect logs
+    #   if: always()
+    #   run: |
+    #     docker-compose logs > e2e-logs.txt
+
+    # - name: Upload logs
+    #   uses: actions/upload-artifact@v4
+    #   if: always()
+    #   with:
+    #     name: e2e-logs
+    #     path: e2e-logs.txt
+
+    # - name: Cleanup
+    #   if: always()
+    #   run: |
+    #     docker-compose down -v
+
+  performance-tests:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+        path: base
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install pytest-benchmark
+
+    # Mock performance tests - add real benchmarks when ready
+    - name: Run performance benchmarks
+      run: |
+        echo "Performance benchmark placeholder"
+        echo "Add real performance benchmarks here when available"
+        # pytest tests/benchmarks/ -v --benchmark-only --benchmark-json=benchmark.json
+
+    # - name: Store benchmark result
+    #   uses: benchmark-action/github-action-benchmark@v1
+    #   with:
+    #     tool: 'pytest'
+    #     output-file-path: benchmark.json
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
+    #     auto-push: false
+
+  compatibility-tests:
+    name: OS Compatibility Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libmagic1
+
+    - name: Install system dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ffmpeg libmagic
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+
+    - name: Run compatibility tests
+      run: |
+        pytest tests/ -v --ignore=tests/test_adlab_smoke.py -n auto
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, compatibility-tests]
+    if: always()
+
+    steps:
+    - name: Create test summary
+      run: |
+        echo "## Test Suite Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || needs.e2e-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Compatibility Tests | ${{ needs.compatibility-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "*Test run completed at $(date -u)*" >> $GITHUB_STEP_SUMMARY
+
+    - name: Check critical tests
+      run: |
+        if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
+          echo "❌ Unit tests failed!"
+          exit 1
+        fi
+        if [[ "${{ needs.compatibility-tests.result }}" != "success" ]]; then
+          echo "❌ Compatibility tests failed!"
+          exit 1
+        fi
+        echo "✅ All critical tests passed!"

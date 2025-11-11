@@ -1,6 +1,9 @@
 """
 Embed text using the Roberta model.
 """
+# local imports
+from clipsai.utils.model_cache import ModelCache
+
 # 3rd party imports
 import torch
 from sentence_transformers import SentenceTransformer
@@ -17,7 +20,9 @@ class TextEmbedder:
         ----------
         None
         """
-        self.__model = SentenceTransformer("all-roberta-large-v1")
+        # Use ModelCache to eliminate 1-2 minute loading bottleneck
+        cache = ModelCache.get_instance()
+        self.__model = cache.get_sentence_transformer("all-roberta-large-v1")
 
     def embed_sentences(self, sentences: list) -> torch.Tensor:
         """

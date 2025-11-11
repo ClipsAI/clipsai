@@ -21,6 +21,7 @@ import uuid
 
 # local package imports
 from clipsai.media.audio_file import AudioFile
+from clipsai.utils.model_cache import ModelCache
 from clipsai.utils.pytorch import get_compute_device, assert_compute_device_available
 
 # third party imports
@@ -54,11 +55,13 @@ class PyannoteDiarizer:
             device = get_compute_device()
         assert_compute_device_available(device)
 
-        self.pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=auth_token,
-        ).to(torch.device(device))
-        logging.debug("Pyannote using device: {}".format(self.pipeline.device))
+        # Use ModelCache to eliminate 2-3 minute loading bottleneck
+        cache = ModelCache.get_instance()
+        self.pipeline = cache.get_pyannote_pipeline(
+            auth_token=auth_token,
+            device=device
+        )
+        logging.info(f"PyannoteDiarizer using cached pipeline on device: {self.pipeline.device}")
 
     def diarize(
         self,

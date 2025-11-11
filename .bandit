@@ -1,0 +1,23 @@
+[bandit]
+# Directories to exclude from scanning
+exclude_dirs = /tests,/venv,/.venv,/.git,/__pycache__,/build,/dist
+
+# Test IDs to skip
+# B101: assert_used - commonly used in tests
+# B601: paramiko_calls - if using paramiko for legitimate purposes
+skips = B101,B601
+
+# Set the confidence level filter (HIGH, MEDIUM, LOW)
+level = MEDIUM
+
+# Set the severity level filter (HIGH, MEDIUM, LOW)
+severity = MEDIUM
+
+# Test IDs to include
+# tests = B201,B301,B302,B303,B304,B305,B306,B307,B308,B309,B310,B311,B312,B313,B314,B315,B316,B317,B318,B319,B320,B321,B322,B323,B324,B325
+
+# Output format
+format = txt
+
+# Report only
+report_only = false

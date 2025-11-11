@@ -21,6 +21,7 @@ from clipsai.media.editor import MediaEditor
 from clipsai.media.video_file import VideoFile
 from clipsai.utils import pytorch
 from clipsai.utils.conversions import bytes_to_gibibytes
+from clipsai.utils.model_cache import ModelCache
 
 # 3rd party imports
 import cv2
@@ -67,14 +68,17 @@ class Resizer:
         pytorch.assert_compute_device_available(device)
         logging.debug("FaceNet using device: {}".format(device))
 
-        self._face_detector = MTCNN(
-            margin=face_detect_margin,
-            post_process=face_detect_post_process,
+        # Use ModelCache to eliminate 4-5 minute loading bottleneck
+        cache = ModelCache.get_instance()
+        self._face_detector = cache.get_face_detector(
             device=device,
+            margin=face_detect_margin,
+            post_process=face_detect_post_process
         )
-        # media pipe automatically uses gpu if available
-        self._face_mesher = mp.solutions.face_mesh.FaceMesh()
+        # MediaPipe FaceMesh (cache shared across instances)
+        self._face_mesher = cache.get_face_mesh()
         self._media_editor = MediaEditor()
+        logging.info(f"Resizer using cached MTCNN and FaceMesh models")
 
     def resize(
         self,

@@ -18,6 +18,7 @@ from .transcription import Transcription
 from clipsai.media.audio_file import AudioFile
 from clipsai.media.editor import MediaEditor
 from clipsai.utils.config_manager import ConfigManager
+from clipsai.utils.model_cache import ModelCache
 from clipsai.utils.pytorch import assert_valid_torch_device, get_compute_device
 from clipsai.utils.type_checker import TypeChecker
 from clipsai.utils.utils import find_missing_dict_keys
@@ -69,11 +70,15 @@ class Transcriber:
         self._precision = precision
         self._device = device
         self._model_size = model_size
-        self._model = whisperx.load_model(
-            whisper_arch=self._model_size,
+
+        # Use ModelCache to eliminate 3-4 minute loading bottleneck
+        cache = ModelCache.get_instance()
+        self._model = cache.get_whisper_model(
+            model_size=self._model_size,
             device=self._device,
-            compute_type=self._precision,
+            precision=self._precision
         )
+        logging.info(f"Transcriber using cached WhisperX model: {self._model_size}")
 
     def transcribe(
         self,
@@ -111,10 +116,11 @@ class Transcriber:
             media_file.path, language=iso6391_lang_code, batch_size=batch_size
         )
 
-        # align whisper output to get word level times
-        model_a, metadata = whisperx.load_align_model(
+        # align whisper output to get word level times (use cache)
+        cache = ModelCache.get_instance()
+        model_a, metadata = cache.get_whisper_align_model(
             language_code=transcription["language"],
-            device=self._device,
+            device=self._device
         )
         aligned_transcription = whisperx.align(
             transcription["segments"],
@@ -189,10 +195,19 @@ class Transcriber:
         # remove global first character -> always a space
         try:
             del aligned_transcription["segments"][0]["chars"][0]
-        except Exception as e:
-            print("Error:", str(e))
-            print("Aligned Transcription:", aligned_transcription)
-            raise Exception(str(e))
+        except (KeyError, IndexError) as e:
+            logging.error(
+                "Failed to remove first character from aligned transcription",
+                exc_info=True,
+                extra={
+                    "media_file": media_file.path,
+                    "segments_count": len(aligned_transcription.get("segments", [])),
+                    "aligned_transcription": aligned_transcription
+                }
+            )
+            raise TranscriberConfigError(
+                f"Invalid transcription structure for file '{media_file.path}': {str(e)}"
+            )
 
         for i, segment in enumerate(aligned_transcription["segments"]):
             segment_chars = segment["chars"]
