@@ -50,6 +50,34 @@ print("StartTime: ", clips[0].start_time)
 print("EndTime: ", clips[0].end_time)
 ```
 
+### Finding clips with TwelveLabs Pegasus (optional)
+
+The default `ClipFinder` is transcript-only: it finds clips from the words alone. For videos where the highlights are visual rather than purely verbal, `PegasusClipFinder` is an opt-in alternative that uses [TwelveLabs](https://twelvelabs.io) Pegasus, a video-language model that analyzes the actual video. It proposes highlight time ranges which are aligned to the transcript so the returned `Clip` objects are interchangeable with those from `ClipFinder`.
+
+Install the optional dependency and set a TwelveLabs API key (a free key with a generous free tier is available at [twelvelabs.io](https://twelvelabs.io)):
+
+```bash {{ language: 'python' }}
+pip install "clipsai[twelvelabs]"
+export TWELVELABS_API_KEY="your-key"
+```
+
+```python
+from clipsai import PegasusClipFinder, Transcriber
+
+transcriber = Transcriber()
+transcription = transcriber.transcribe(audio_file_path="/abs/path/to/video.mp4")
+
+clipfinder = PegasusClipFinder()
+# pass a publicly accessible URL, or a video_id already indexed in TwelveLabs
+clips = clipfinder.find_clips(
+    transcription=transcription,
+    video_url="https://example.com/video.mp4",
+)
+
+print("StartTime: ", clips[0].start_time)
+print("EndTime: ", clips[0].end_time)
+```
+
 ### Resizing a video
 
 A hugging face access token is required to resize a video since [Pyannote](https://github.com/pyannote/pyannote-audio) is utilized for speaker diarization. You won't be charged for using Pyannote and instructions are on the [Pyannote HuggingFace ](https://huggingface.co/pyannote/speaker-diarization-3.0#requirements) page. For resizing the original video to the desired aspect ratio, refer to the resizing reference.

@@ -51,6 +51,9 @@ setup(
     },
     include_package_data=True,
     extras_require={
+        "twelvelabs": [
+            "twelvelabs>=1.2.8",
+        ],
         "dev": [
             "black",
             "black[jupyter]",
