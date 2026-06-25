@@ -1,5 +1,6 @@
 # Functions
 from .clip.clipfinder import ClipFinder
+from .clip.pegasus_clipfinder import PegasusClipFinder
 from .media.audio_file import AudioFile
 from .media.audiovideo_file import AudioVideoFile
 from .media.editor import MediaEditor
@@ -22,6 +23,7 @@ __all__ = [
     "Clip",
     "Crops",
     "MediaEditor",
+    "PegasusClipFinder",
     "Segment",
     "Sentence",
     "Transcriber",
